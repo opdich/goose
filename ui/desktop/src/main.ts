@@ -10,6 +10,7 @@ import {
   powerSaveBlocker,
   Tray,
   App,
+  globalShortcut,
 } from 'electron';
 import { Buffer } from 'node:buffer';
 import started from 'electron-squirrel-startup';
@@ -720,7 +721,39 @@ ipcMain.handle('get-allowed-extensions', async () => {
   }
 });
 
+const registerGlobalHotkey = (accelerator: string) => {
+  // Unregister any existing shortcuts first
+  globalShortcut.unregisterAll();
+
+  try {
+    const ret = globalShortcut.register(accelerator, () => {
+      const windows = BrowserWindow.getAllWindows();
+      if (windows.length > 0) {
+        windows.forEach((win) => {
+          win.show();
+        });
+      } else {
+        const recentDirs = loadRecentDirs();
+        const openDir = recentDirs?.[0] ?? undefined;
+        createChat(app, undefined, openDir);
+      }
+    });
+
+    if (!ret) {
+      console.error('Failed to register global hotkey');
+      return false;
+    }
+    return true;
+  } catch (e) {
+    console.error('Error registering global hotkey:', e);
+    return false;
+  }
+};
+
 app.whenReady().then(async () => {
+  // Register the default global hotkey
+  registerGlobalHotkey('CommandOrControl+G');
+
   session.defaultSession.webRequest.onBeforeSendHeaders((details, callback) => {
     details.requestHeaders['Origin'] = 'http://localhost:5173';
     callback({ cancel: false, requestHeaders: details.requestHeaders });
@@ -977,6 +1010,11 @@ async function getAllowList(): Promise<string[]> {
     throw error;
   }
 }
+
+app.on('will-quit', () => {
+  // Unregister all shortcuts when quitting
+  globalShortcut.unregisterAll();
+});
 
 // Quit when all windows are closed, except on macOS or if we have a tray icon.
 app.on('window-all-closed', () => {

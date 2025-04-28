@@ -721,6 +721,12 @@ ipcMain.handle('get-allowed-extensions', async () => {
   }
 });
 
+const createNewWindow = async (app: App, dir?: string | null) => {
+  const recentDirs = loadRecentDirs();
+  const openDir = dir || (recentDirs.length > 0 ? recentDirs[0] : undefined);
+  createChat(app, undefined, openDir);
+};
+
 const registerGlobalHotkey = (accelerator: string) => {
   // Unregister any existing shortcuts first
   globalShortcut.unregisterAll();
@@ -733,9 +739,7 @@ const registerGlobalHotkey = (accelerator: string) => {
           win.show();
         });
       } else {
-        const recentDirs = loadRecentDirs();
-        const openDir = recentDirs?.[0] ?? undefined;
-        createChat(app, undefined, openDir);
+        createNewWindow(app);
       }
     });
 
@@ -772,9 +776,7 @@ app.whenReady().then(async () => {
   const { dirPath } = parseArgs();
 
   createTray();
-  const recentDirs = loadRecentDirs();
-  let openDir = dirPath || (recentDirs.length > 0 ? recentDirs[0] : null);
-  createChat(app, undefined, openDir);
+  createNewWindow(app, dirPath);
 
   // Get the existing menu
   const menu = Menu.getApplicationMenu();

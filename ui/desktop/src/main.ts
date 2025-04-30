@@ -756,7 +756,7 @@ const registerGlobalHotkey = (accelerator: string) => {
 
 app.whenReady().then(async () => {
   // Register the default global hotkey
-  registerGlobalHotkey('CommandOrControl+G');
+  registerGlobalHotkey('CommandOrControl+Option+G');
 
   session.defaultSession.webRequest.onBeforeSendHeaders((details, callback) => {
     details.requestHeaders['Origin'] = 'http://localhost:5173';

@@ -857,6 +857,17 @@ app.whenReady().then(async () => {
         },
       })
     );
+
+    // Add menu item for hotkey
+    fileMenu?.submenu.append(
+      new MenuItem({
+        label: 'Focus Goose Window',
+        accelerator: 'CmdOrCtrl+Alt+Shift+G',
+        click() {
+          focusWindow();
+        },
+      })
+    );
   }
 
   if (menu) {

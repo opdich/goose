@@ -727,20 +727,25 @@ const createNewWindow = async (app: App, dir?: string | null) => {
   createChat(app, undefined, openDir);
 };
 
+const focusWindow = () => {
+  const windows = BrowserWindow.getAllWindows();
+  if (windows.length > 0) {
+    windows.forEach((win) => {
+      win.show();
+    });
+    windows[windows.length - 1].webContents.send('focus-input');
+  } else {
+    createNewWindow(app);
+  }
+};
+
 const registerGlobalHotkey = (accelerator: string) => {
   // Unregister any existing shortcuts first
   globalShortcut.unregisterAll();
 
   try {
     const ret = globalShortcut.register(accelerator, () => {
-      const windows = BrowserWindow.getAllWindows();
-      if (windows.length > 0) {
-        windows.forEach((win) => {
-          win.show();
-        });
-      } else {
-        createNewWindow(app);
-      }
+      focusWindow();
     });
 
     if (!ret) {

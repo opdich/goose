@@ -1,12 +1,12 @@
 import React from 'react';
 import { Card } from './ui/card';
-import Box from './ui/Box';
 import { ToolCallArguments } from './ToolCallArguments';
 import MarkdownContent from './MarkdownContent';
 import { LoadingPlaceholder } from './LoadingPlaceholder';
-import { ChevronUp } from 'lucide-react';
 import { Content, ToolRequestMessageContent, ToolResponseMessageContent } from '../types/message';
 import { snakeToTitleCase } from '../utils';
+import Dot from './ui/Dot';
+import Expand from './ui/Expand';
 
 interface ToolCallWithResponseProps {
   isCancelledMessage: boolean;
@@ -20,17 +20,75 @@ export default function ToolCallWithResponse({
   toolResponse,
 }: ToolCallWithResponseProps) {
   const toolCall = toolRequest.toolCall.status === 'success' ? toolRequest.toolCall.value : null;
-
   if (!toolCall) {
     return null;
   }
 
   return (
-    <div className="w-full">
+    <div className={'w-full py-1 text-textSubtle text-sm'}>
       <Card className="">
-        <ToolCallView toolCall={toolCall} />
-        {!isCancelledMessage ? (
-          toolResponse ? (
+        <ToolCallView {...{ isCancelledMessage, toolCall, toolResponse }} />
+      </Card>
+    </div>
+  );
+}
+
+interface ToolCallExpandableProps {
+  label: string | ((isExpanded: boolean) => React.ReactNode);
+  defaultExpanded?: boolean;
+  children: React.ReactNode;
+  className?: string;
+}
+
+function ToolCallExpandable({
+  label,
+  defaultExpanded = false,
+  children,
+  className = '',
+}: ToolCallExpandableProps) {
+  const [isExpanded, setIsExpanded] = React.useState(defaultExpanded);
+  const toggleExpand = () => setIsExpanded((prev) => !prev);
+
+  return (
+    <div className={className}>
+      <button onClick={toggleExpand} className="w-full flex justify-between items-center py-1 px-2">
+        <span className="flex items-center">
+          {typeof label === 'function' ? label(isExpanded) : label}
+        </span>
+        <Expand size={5} isExpanded={isExpanded} />
+      </button>
+      {isExpanded && <div>{children}</div>}
+    </div>
+  );
+}
+
+interface ToolCallViewProps {
+  isCancelledMessage: boolean;
+  toolCall: {
+    name: string;
+    arguments: Record<string, unknown>;
+  };
+  toolResponse?: ToolResponseMessageContent;
+}
+
+function ToolCallView({ isCancelledMessage, toolCall, toolResponse }: ToolCallViewProps) {
+  const isToolDetails = Object.entries(toolCall?.arguments).length > 0;
+
+  return (
+    <ToolCallExpandable
+      label={(isExpanded) => (
+        <>
+          <Dot size={2} isActive={isExpanded} />
+          <span className="ml-[10px]">
+            {snakeToTitleCase(toolCall.name.substring(toolCall.name.lastIndexOf('__') + 2))}
+          </span>
+        </>
+      )}
+    >
+      {isToolDetails && <ToolDetailsView toolCall={toolCall} />}
+      <div className={`bg-bgStandard mt-1 rounded ${isToolDetails ? 'rounded-t-none' : ''}`}>
+        {!isCancelledMessage &&
+          (toolResponse ? (
             <ToolResultView
               result={
                 toolResponse.toolResult.status === 'success'
@@ -40,34 +98,24 @@ export default function ToolCallWithResponse({
             />
           ) : (
             <LoadingPlaceholder />
-          )
-        ) : undefined}
-      </Card>
-    </div>
+          ))}
+      </div>
+    </ToolCallExpandable>
   );
 }
 
-interface ToolCallViewProps {
+interface ToolDetailsViewProps {
   toolCall: {
     name: string;
     arguments: Record<string, unknown>;
   };
 }
 
-function ToolCallView({ toolCall }: ToolCallViewProps) {
+function ToolDetailsView({ toolCall }: ToolDetailsViewProps) {
   return (
-    <div>
-      <div className="flex items-center mb-4">
-        <Box size={16} />
-        <span className="ml-[8px] text-textStandard">
-          {snakeToTitleCase(toolCall.name.substring(toolCall.name.lastIndexOf('__') + 2))}
-        </span>
-      </div>
-
+    <ToolCallExpandable label="Tool Details" className="bg-bgStandard rounded-t mt-1">
       {toolCall.arguments && <ToolCallArguments args={toolCall.arguments} />}
-
-      <div className="self-stretch h-px my-[10px] -mx-4 bg-borderSubtle dark:bg-gray-700" />
-    </div>
+    </ToolCallExpandable>
   );
 }
 
@@ -120,33 +168,33 @@ function ToolResultView({ result }: ToolResultViewProps) {
             {shouldMinimize && (
               <button
                 onClick={() => toggleExpand(index)}
-                className="mb-1 flex items-center text-textStandard"
+                className="w-full flex justify-between items-center pl-[19px] pr-2 py-1"
               >
-                <span className="mr-2 text-sm">Output</span>
-                <ChevronUp
-                  className={`h-5 w-5 transition-all origin-center ${!isExpanded ? 'rotate-180' : ''}`}
-                />
+                <span className="">Output</span>
+                <Expand size={5} isExpanded={isExpanded} />
               </button>
             )}
             {(isExpanded || !shouldMinimize) && (
               <>
-                {item.type === 'text' && item.text && (
-                  <MarkdownContent
-                    content={item.text}
-                    className="whitespace-pre-wrap p-2 max-w-full overflow-x-auto"
-                  />
-                )}
-                {item.type === 'image' && (
-                  <img
-                    src={`data:${item.mimeType};base64,${item.data}`}
-                    alt="Tool result"
-                    className="max-w-full h-auto rounded-md my-2"
-                    onError={(e) => {
-                      console.error('Failed to load image: Invalid MIME-type encoded image data');
-                      e.currentTarget.style.display = 'none';
-                    }}
-                  />
-                )}
+                <div className="bg-bgApp rounded-b pl-[19px] pr-2 py-4">
+                  {item.type === 'text' && item.text && (
+                    <MarkdownContent
+                      content={item.text}
+                      className="whitespace-pre-wrap p-2 max-w-full overflow-x-auto"
+                    />
+                  )}
+                  {item.type === 'image' && (
+                    <img
+                      src={`data:${item.mimeType};base64,${item.data}`}
+                      alt="Tool result"
+                      className="max-w-full h-auto rounded-md my-2"
+                      onError={(e) => {
+                        console.error('Failed to load image: Invalid MIME-type encoded image data');
+                        e.currentTarget.style.display = 'none';
+                      }}
+                    />
+                  )}
+                </div>
               </>
             )}
           </div>

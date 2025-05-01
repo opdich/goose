@@ -30,8 +30,8 @@ export function ToolCallArguments({ args }: ToolCallArgumentsProps) {
         return (
           <div className="mb-2">
             <div className="flex flex-row">
-              <span className="text-sm font-medium text-textSubtle min-w-[140px]">{key}</span>
-              <span className="text-sm text-textStandard">{value}</span>
+              <span className="text-sm text-textSubtle min-w-[140px]">{key}</span>
+              <span className="text-sm text-textPlaceholder">{value}</span>
             </div>
           </div>
         );
@@ -40,18 +40,18 @@ export function ToolCallArguments({ args }: ToolCallArgumentsProps) {
       return (
         <div className="mb-2">
           <div className="flex flex-row">
-            <span className="text-sm font-medium text-textSubtle min-w-[140px]">{key}</span>
+            <span className="text-sm text-textSubtle min-w-[140px]">{key}</span>
             <div className="w-full flex justify-between items-center">
               {isExpanded ? (
                 <div className="mt-2">
                   <MarkdownContent content={value} />
                 </div>
               ) : (
-                <span className="text-sm text-textStandard mr-2">{value.slice(0, 60)}...</span>
+                <span className="text-sm text-textPlaceholder mr-2">{value.slice(0, 60)}...</span>
               )}
               <button
                 onClick={() => toggleKey(key)}
-                className="text-sm hover:opacity-75 text-textStandard"
+                className="text-sm hover:opacity-75 text-textPlaceholder"
               >
                 <Expand size={5} isExpanded={isExpanded} />
               </button>
@@ -71,8 +71,8 @@ export function ToolCallArguments({ args }: ToolCallArgumentsProps) {
     return (
       <div className="mb-2">
         <div className="flex flex-row">
-          <span className="font-medium mr- text-textStandard min-w-[140px]2">{key}:</span>
-          <pre className="whitespace-pre-wrap text-textStandard">{content}</pre>
+          <span className="mr- text-textPlaceholder min-w-[140px]2">{key}:</span>
+          <pre className="whitespace-pre-wrap text-textPlaceholder">{content}</pre>
         </div>
       </div>
     );

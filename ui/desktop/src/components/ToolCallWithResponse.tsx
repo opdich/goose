@@ -25,7 +25,7 @@ export default function ToolCallWithResponse({
   }
 
   return (
-    <div className={'w-full py-1 text-textSubtle text-sm'}>
+    <div className={'w-full text-textSubtle text-sm'}>
       <Card className="">
         <ToolCallView {...{ isCancelledMessage, toolCall, toolResponse }} />
       </Card>
@@ -51,7 +51,7 @@ function ToolCallExpandable({
 
   return (
     <div className={className}>
-      <button onClick={toggleExpand} className="w-full flex justify-between items-center py-1 px-2">
+      <button onClick={toggleExpand} className="w-full flex justify-between items-center">
         <span className="flex items-center">
           {typeof label === 'function' ? label(isExpanded) : label}
         </span>
@@ -113,7 +113,10 @@ interface ToolDetailsViewProps {
 
 function ToolDetailsView({ toolCall }: ToolDetailsViewProps) {
   return (
-    <ToolCallExpandable label="Tool Details" className="bg-bgStandard rounded-t mt-1">
+    <ToolCallExpandable
+      label="Tool Details"
+      className="bg-bgStandard rounded-t pl-[19px] pr-2 py-1 mt-1"
+    >
       {toolCall.arguments && <ToolCallArguments args={toolCall.arguments} />}
     </ToolCallExpandable>
   );

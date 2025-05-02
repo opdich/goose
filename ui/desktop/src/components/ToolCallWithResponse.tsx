@@ -2,7 +2,6 @@ import React from 'react';
 import { Card } from './ui/card';
 import { ToolCallArguments } from './ToolCallArguments';
 import MarkdownContent from './MarkdownContent';
-import { LoadingPlaceholder } from './LoadingPlaceholder';
 import { Content, ToolRequestMessageContent, ToolResponseMessageContent } from '../types/message';
 import { snakeToTitleCase } from '../utils';
 import Dot from './ui/Dot';
@@ -34,7 +33,7 @@ export default function ToolCallWithResponse({
 }
 
 interface ToolCallExpandableProps {
-  label: string | React.ReactNode | ((isExpanded: boolean) => React.ReactNode);
+  label: string | React.ReactNode;
   defaultExpanded?: boolean;
   forceExpand?: boolean;
   children: React.ReactNode;
@@ -57,9 +56,7 @@ function ToolCallExpandable({
   return (
     <div className={className}>
       <button onClick={toggleExpand} className="w-full flex justify-between items-center pr-2">
-        <span className="flex items-center">
-          {typeof label === 'function' ? label(isExpanded) : label}
-        </span>
+        <span className="flex items-center">{label}</span>
         <Expand size={5} isExpanded={isExpanded} />
       </button>
       {isExpanded && <div>{children}</div>}
@@ -99,14 +96,14 @@ function ToolCallView({ isCancelledMessage, toolCall, toolResponse }: ToolCallVi
     <ToolCallExpandable
       defaultExpanded={shouldExpand}
       forceExpand={shouldExpand}
-      label={(isExpanded) => (
+      label={
         <>
-          <Dot size={2} isActive={isExpanded} />
+          <Dot size={2} isLoading={isLoading} />
           <span className="ml-[10px]">
             {snakeToTitleCase(toolCall.name.substring(toolCall.name.lastIndexOf('__') + 2))}
           </span>
         </>
-      )}
+      }
     >
       {/* Tool Details */}
       {isToolDetails && (
@@ -118,23 +115,17 @@ function ToolCallView({ isCancelledMessage, toolCall, toolResponse }: ToolCallVi
       {/* Tool Output */}
       {!isCancelledMessage && (
         <>
-          {isLoading ? (
-            <div className={`bg-bgStandard mt-1 rounded ${isToolDetails ? 'rounded-t-none' : ''}`}>
-              <LoadingPlaceholder />
-            </div>
-          ) : (
-            toolResults.map(({ result, defaultExpanded }, index) => {
-              const isLast = index === toolResults.length - 1;
-              return (
-                <div
-                  key={index}
-                  className={`bg-bgStandard mt-1 ${isToolDetails ? 'rounded-t-none' : ''} ${isLast ? 'rounded-b' : ''}`}
-                >
-                  <ToolResultView result={result} defaultExpanded={defaultExpanded} />
-                </div>
-              );
-            })
-          )}
+          {toolResults.map(({ result, defaultExpanded }, index) => {
+            const isLast = index === toolResults.length - 1;
+            return (
+              <div
+                key={index}
+                className={`bg-bgStandard mt-1 ${isToolDetails ? 'rounded-t-none' : ''} ${isLast ? 'rounded-b' : ''}`}
+              >
+                <ToolResultView result={result} defaultExpanded={defaultExpanded} />
+              </div>
+            );
+          })}
         </>
       )}
     </ToolCallExpandable>

@@ -28,30 +28,30 @@ export function ToolCallArguments({ args }: ToolCallArgumentsProps) {
 
       if (!needsExpansion) {
         return (
-          <div className="mb-2">
+          <div className="text-sm mb-2">
             <div className="flex flex-row">
-              <span className="text-sm text-textSubtle min-w-[140px]">{key}</span>
-              <span className="text-sm text-textPlaceholder">{value}</span>
+              <span className="text-textSubtle min-w-[140px]">{key}</span>
+              <span className="text-textPlaceholder">{value}</span>
             </div>
           </div>
         );
       }
 
       return (
-        <div className="mb-2">
+        <div className="text-sm mb-2">
           <div className="flex flex-row">
-            <span className="text-sm text-textSubtle min-w-[140px]">{key}</span>
-            <div className="w-full flex justify-between items-center">
+            <span className="text-textSubtle min-w-[140px]">{key}</span>
+            <div className="w-full flex justify-between items-start">
               {isExpanded ? (
-                <div className="mt-2">
-                  <MarkdownContent content={value} />
+                <div className="">
+                  <MarkdownContent content={value} className="text-sm text-textPlaceholder" />
                 </div>
               ) : (
-                <span className="text-sm text-textPlaceholder mr-2">{value.slice(0, 60)}...</span>
+                <span className="text-textPlaceholder mr-2">{value.slice(0, 60)}...</span>
               )}
               <button
                 onClick={() => toggleKey(key)}
-                className="text-sm hover:opacity-75 text-textPlaceholder pr-2"
+                className="hover:opacity-75 text-textPlaceholder pr-2"
               >
                 <Expand size={5} isExpanded={isExpanded} />
               </button>

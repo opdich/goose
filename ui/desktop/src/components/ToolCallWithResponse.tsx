@@ -36,6 +36,7 @@ export default function ToolCallWithResponse({
 interface ToolCallExpandableProps {
   label: string | React.ReactNode | ((isExpanded: boolean) => React.ReactNode);
   defaultExpanded?: boolean;
+  forceExpand?: boolean;
   children: React.ReactNode;
   className?: string;
 }
@@ -43,11 +44,15 @@ interface ToolCallExpandableProps {
 function ToolCallExpandable({
   label,
   defaultExpanded = false,
+  forceExpand,
   children,
   className = '',
 }: ToolCallExpandableProps) {
   const [isExpanded, setIsExpanded] = React.useState(defaultExpanded);
   const toggleExpand = () => setIsExpanded((prev) => !prev);
+  React.useEffect(() => {
+    if (forceExpand) setIsExpanded(true);
+  }, [forceExpand]);
 
   return (
     <div className={className}>
@@ -74,16 +79,26 @@ interface ToolCallViewProps {
 function ToolCallView({ isCancelledMessage, toolCall, toolResponse }: ToolCallViewProps) {
   const isToolDetails = Object.entries(toolCall?.arguments).length > 0;
   const isLoading = !toolResponse || toolResponse.toolResult.status !== 'success';
-  const filteredResults =
+
+  const toolResults: { result: Content; defaultExpanded: boolean }[] =
     !isLoading && Array.isArray(toolResponse.toolResult.value)
-      ? toolResponse.toolResult.value.filter((item) => {
-          const audience = item.annotations?.audience as string[] | undefined;
-          return !audience || audience.includes('user');
-        })
+      ? toolResponse.toolResult.value
+          .filter((item) => {
+            const audience = item.annotations?.audience as string[] | undefined;
+            return !audience || audience.includes('user');
+          })
+          .map((item) => ({
+            result: item,
+            defaultExpanded: ((item.annotations?.priority as number | undefined) ?? -1) >= 0.5,
+          }))
       : [];
+
+  const shouldExpand = toolResults.some((v) => v.defaultExpanded);
 
   return (
     <ToolCallExpandable
+      defaultExpanded={shouldExpand}
+      forceExpand={shouldExpand}
       label={(isExpanded) => (
         <>
           <Dot size={2} isActive={isExpanded} />
@@ -93,11 +108,14 @@ function ToolCallView({ isCancelledMessage, toolCall, toolResponse }: ToolCallVi
         </>
       )}
     >
+      {/* Tool Details */}
       {isToolDetails && (
         <div className="bg-bgStandard rounded-t mt-1">
           <ToolDetailsView toolCall={toolCall} />
         </div>
       )}
+
+      {/* Tool Output */}
       {!isCancelledMessage && (
         <>
           {isLoading ? (
@@ -105,14 +123,14 @@ function ToolCallView({ isCancelledMessage, toolCall, toolResponse }: ToolCallVi
               <LoadingPlaceholder />
             </div>
           ) : (
-            filteredResults.map((item, index) => {
-              const isLast = index === filteredResults.length - 1;
+            toolResults.map(({ result, defaultExpanded }, index) => {
+              const isLast = index === toolResults.length - 1;
               return (
                 <div
                   key={index}
                   className={`bg-bgStandard mt-1 ${isToolDetails ? 'rounded-t-none' : ''} ${isLast ? 'rounded-b' : ''}`}
                 >
-                  <ToolResultView result={item} />
+                  <ToolResultView result={result} defaultExpanded={defaultExpanded} />
                 </div>
               );
             })
@@ -140,11 +158,10 @@ function ToolDetailsView({ toolCall }: ToolDetailsViewProps) {
 
 interface ToolResultViewProps {
   result: Content;
+  defaultExpanded: boolean;
 }
 
-function ToolResultView({ result }: ToolResultViewProps) {
-  const defaultExpanded = ((result.annotations?.priority as number | undefined) ?? -1) >= 0.5;
-
+function ToolResultView({ result, defaultExpanded }: ToolResultViewProps) {
   return (
     <ToolCallExpandable
       label={<span className="pl-[19px] py-1">Output</span>}

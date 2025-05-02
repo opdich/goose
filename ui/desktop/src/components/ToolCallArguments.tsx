@@ -51,7 +51,7 @@ export function ToolCallArguments({ args }: ToolCallArgumentsProps) {
               )}
               <button
                 onClick={() => toggleKey(key)}
-                className="text-sm hover:opacity-75 text-textPlaceholder"
+                className="text-sm hover:opacity-75 text-textPlaceholder pr-2"
               >
                 <Expand size={5} isExpanded={isExpanded} />
               </button>

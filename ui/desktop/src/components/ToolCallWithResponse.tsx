@@ -34,7 +34,7 @@ export default function ToolCallWithResponse({
 }
 
 interface ToolCallExpandableProps {
-  label: string | ((isExpanded: boolean) => React.ReactNode);
+  label: string | React.ReactNode | ((isExpanded: boolean) => React.ReactNode);
   defaultExpanded?: boolean;
   children: React.ReactNode;
   className?: string;
@@ -51,7 +51,7 @@ function ToolCallExpandable({
 
   return (
     <div className={className}>
-      <button onClick={toggleExpand} className="w-full flex justify-between items-center">
+      <button onClick={toggleExpand} className="w-full flex justify-between items-center pr-2">
         <span className="flex items-center">
           {typeof label === 'function' ? label(isExpanded) : label}
         </span>
@@ -73,6 +73,14 @@ interface ToolCallViewProps {
 
 function ToolCallView({ isCancelledMessage, toolCall, toolResponse }: ToolCallViewProps) {
   const isToolDetails = Object.entries(toolCall?.arguments).length > 0;
+  const isLoading = !toolResponse || toolResponse.toolResult.status !== 'success';
+  const filteredResults =
+    !isLoading && Array.isArray(toolResponse.toolResult.value)
+      ? toolResponse.toolResult.value.filter((item) => {
+          const audience = item.annotations?.audience as string[] | undefined;
+          return !audience || audience.includes('user');
+        })
+      : [];
 
   return (
     <ToolCallExpandable
@@ -85,21 +93,32 @@ function ToolCallView({ isCancelledMessage, toolCall, toolResponse }: ToolCallVi
         </>
       )}
     >
-      {isToolDetails && <ToolDetailsView toolCall={toolCall} />}
-      <div className={`bg-bgStandard mt-1 rounded ${isToolDetails ? 'rounded-t-none' : ''}`}>
-        {!isCancelledMessage &&
-          (toolResponse ? (
-            <ToolResultView
-              result={
-                toolResponse.toolResult.status === 'success'
-                  ? toolResponse.toolResult.value
-                  : undefined
-              }
-            />
+      {isToolDetails && (
+        <div className="bg-bgStandard rounded-t mt-1">
+          <ToolDetailsView toolCall={toolCall} />
+        </div>
+      )}
+      {!isCancelledMessage && (
+        <>
+          {isLoading ? (
+            <div className={`bg-bgStandard mt-1 rounded ${isToolDetails ? 'rounded-t-none' : ''}`}>
+              <LoadingPlaceholder />
+            </div>
           ) : (
-            <LoadingPlaceholder />
-          ))}
-      </div>
+            filteredResults.map((item, index) => {
+              const isLast = index === filteredResults.length - 1;
+              return (
+                <div
+                  key={index}
+                  className={`bg-bgStandard mt-1 ${isToolDetails ? 'rounded-t-none' : ''} ${isLast ? 'rounded-b' : ''}`}
+                >
+                  <ToolResultView result={item} />
+                </div>
+              );
+            })
+          )}
+        </>
+      )}
     </ToolCallExpandable>
   );
 }
@@ -113,96 +132,43 @@ interface ToolDetailsViewProps {
 
 function ToolDetailsView({ toolCall }: ToolDetailsViewProps) {
   return (
-    <ToolCallExpandable
-      label="Tool Details"
-      className="bg-bgStandard rounded-t pl-[19px] pr-2 py-1 mt-1"
-    >
+    <ToolCallExpandable label="Tool Details" className="pl-[19px] py-1">
       {toolCall.arguments && <ToolCallArguments args={toolCall.arguments} />}
     </ToolCallExpandable>
   );
 }
 
 interface ToolResultViewProps {
-  result?: Content[];
+  result: Content;
 }
 
 function ToolResultView({ result }: ToolResultViewProps) {
-  // State to track expanded items
-  const [expandedItems, setExpandedItems] = React.useState<number[]>([]);
-
-  // If no result info, don't show anything
-  if (!result) return null;
-
-  // Find results where either audience is not set, or it's set to a list that includes user
-  const filteredResults = result.filter((item) => {
-    // Check audience (which may not be in the type)
-    const audience = item.annotations?.audience;
-
-    return !audience || audience.includes('user');
-  });
-
-  if (filteredResults.length === 0) return null;
-
-  const toggleExpand = (index: number) => {
-    setExpandedItems((prev) =>
-      prev.includes(index) ? prev.filter((i) => i !== index) : [...prev, index]
-    );
-  };
-
-  const shouldShowExpanded = (item: Content, index: number) => {
-    return (
-      (item.annotations &&
-        item.annotations.priority !== undefined &&
-        item.annotations.priority >= 0.5) ||
-      expandedItems.includes(index)
-    );
-  };
+  const defaultExpanded = ((result.annotations?.priority as number | undefined) ?? -1) >= 0.5;
 
   return (
-    <div className="">
-      {filteredResults.map((item, index) => {
-        const isExpanded = shouldShowExpanded(item, index);
-        const shouldMinimize =
-          !item.annotations ||
-          item.annotations.priority === undefined ||
-          item.annotations.priority < 0.5;
-        return (
-          <div key={index} className="relative">
-            {shouldMinimize && (
-              <button
-                onClick={() => toggleExpand(index)}
-                className="w-full flex justify-between items-center pl-[19px] pr-2 py-1"
-              >
-                <span className="">Output</span>
-                <Expand size={5} isExpanded={isExpanded} />
-              </button>
-            )}
-            {(isExpanded || !shouldMinimize) && (
-              <>
-                <div className="bg-bgApp rounded-b pl-[19px] pr-2 py-4">
-                  {item.type === 'text' && item.text && (
-                    <MarkdownContent
-                      content={item.text}
-                      className="whitespace-pre-wrap p-2 max-w-full overflow-x-auto"
-                    />
-                  )}
-                  {item.type === 'image' && (
-                    <img
-                      src={`data:${item.mimeType};base64,${item.data}`}
-                      alt="Tool result"
-                      className="max-w-full h-auto rounded-md my-2"
-                      onError={(e) => {
-                        console.error('Failed to load image: Invalid MIME-type encoded image data');
-                        e.currentTarget.style.display = 'none';
-                      }}
-                    />
-                  )}
-                </div>
-              </>
-            )}
-          </div>
-        );
-      })}
-    </div>
+    <ToolCallExpandable
+      label={<span className="pl-[19px] py-1">Output</span>}
+      defaultExpanded={defaultExpanded}
+    >
+      <div className="bg-bgApp rounded-b pl-[19px] pr-2 py-4">
+        {result.type === 'text' && result.text && (
+          <MarkdownContent
+            content={result.text}
+            className="whitespace-pre-wrap p-2 max-w-full overflow-x-auto"
+          />
+        )}
+        {result.type === 'image' && (
+          <img
+            src={`data:${result.mimeType};base64,${result.data}`}
+            alt="Tool result"
+            className="max-w-full h-auto rounded-md my-2"
+            onError={(e) => {
+              console.error('Failed to load image');
+              e.currentTarget.style.display = 'none';
+            }}
+          />
+        )}
+      </div>
+    </ToolCallExpandable>
   );
 }

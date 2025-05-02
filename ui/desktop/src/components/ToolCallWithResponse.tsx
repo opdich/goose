@@ -4,7 +4,7 @@ import { ToolCallArguments } from './ToolCallArguments';
 import MarkdownContent from './MarkdownContent';
 import { Content, ToolRequestMessageContent, ToolResponseMessageContent } from '../types/message';
 import { snakeToTitleCase } from '../utils';
-import Dot from './ui/Dot';
+import Dot, { LoadingStatus } from './ui/Dot';
 import Expand from './ui/Expand';
 
 interface ToolCallWithResponseProps {
@@ -75,10 +75,12 @@ interface ToolCallViewProps {
 
 function ToolCallView({ isCancelledMessage, toolCall, toolResponse }: ToolCallViewProps) {
   const isToolDetails = Object.entries(toolCall?.arguments).length > 0;
-  const isLoading = !toolResponse || toolResponse.toolResult.status !== 'success';
+  const loadingStatus: LoadingStatus = !toolResponse?.toolResult.status
+    ? 'loading'
+    : toolResponse?.toolResult.status;
 
   const toolResults: { result: Content; defaultExpanded: boolean }[] =
-    !isLoading && Array.isArray(toolResponse.toolResult.value)
+    loadingStatus === 'success' && Array.isArray(toolResponse?.toolResult.value)
       ? toolResponse.toolResult.value
           .filter((item) => {
             const audience = item.annotations?.audience as string[] | undefined;
@@ -98,7 +100,7 @@ function ToolCallView({ isCancelledMessage, toolCall, toolResponse }: ToolCallVi
       forceExpand={shouldExpand}
       label={
         <>
-          <Dot size={2} isLoading={isLoading} />
+          <Dot size={2} loadingStatus={loadingStatus} />
           <span className="ml-[10px]">
             {snakeToTitleCase(toolCall.name.substring(toolCall.name.lastIndexOf('__') + 2))}
           </span>

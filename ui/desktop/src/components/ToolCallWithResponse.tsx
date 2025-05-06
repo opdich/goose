@@ -122,7 +122,7 @@ function ToolCallView({ isCancelledMessage, toolCall, toolResponse }: ToolCallVi
             return (
               <div
                 key={index}
-                className={`bg-bgStandard mt-1 ${isToolDetails ? 'rounded-t-none' : ''} ${isLast ? 'rounded-b' : ''}`}
+                className={`bg-bgStandard mt-1 ${isToolDetails || index > 0 ? '' : 'rounded-t'} ${isLast ? 'rounded-b' : ''}`}
               >
                 <ToolResultView result={result} defaultExpanded={defaultExpanded} />
               </div>

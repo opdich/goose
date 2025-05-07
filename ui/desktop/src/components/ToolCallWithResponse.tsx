@@ -74,6 +74,17 @@ interface ToolCallViewProps {
 }
 
 function ToolCallView({ isCancelledMessage, toolCall, toolResponse }: ToolCallViewProps) {
+  const responseStyle = localStorage.getItem('response_style');
+  const isExpandToolDetails = (() => {
+    switch (responseStyle) {
+      case 'concise':
+        return false;
+      case 'detailed':
+      default:
+        return true;
+    }
+  })();
+
   const isToolDetails = Object.entries(toolCall?.arguments).length > 0;
   const loadingStatus: LoadingStatus = !toolResponse?.toolResult.status
     ? 'loading'
@@ -92,7 +103,7 @@ function ToolCallView({ isCancelledMessage, toolCall, toolResponse }: ToolCallVi
           }))
       : [];
 
-  const shouldExpand = toolResults.some((v) => v.defaultExpanded);
+  const shouldExpand = isExpandToolDetails || toolResults.some((v) => v.defaultExpanded);
 
   return (
     <ToolCallExpandable
@@ -110,7 +121,7 @@ function ToolCallView({ isCancelledMessage, toolCall, toolResponse }: ToolCallVi
       {/* Tool Details */}
       {isToolDetails && (
         <div className="bg-bgStandard rounded-t mt-1">
-          <ToolDetailsView toolCall={toolCall} />
+          <ToolDetailsView toolCall={toolCall} defaultExpanded={isExpandToolDetails} />
         </div>
       )}
 
@@ -122,7 +133,10 @@ function ToolCallView({ isCancelledMessage, toolCall, toolResponse }: ToolCallVi
             return (
               <div
                 key={index}
-                className={`bg-bgStandard mt-1 ${isToolDetails || index > 0 ? '' : 'rounded-t'} ${isLast ? 'rounded-b' : ''}`}
+                className={`bg-bgStandard mt-1 
+                  ${isToolDetails || index > 0 ? '' : 'rounded-t'} 
+                  ${isLast ? 'rounded-b' : ''}
+                `}
               >
                 <ToolResultView result={result} defaultExpanded={defaultExpanded} />
               </div>
@@ -139,11 +153,16 @@ interface ToolDetailsViewProps {
     name: string;
     arguments: Record<string, unknown>;
   };
+  defaultExpanded: boolean;
 }
 
-function ToolDetailsView({ toolCall }: ToolDetailsViewProps) {
+function ToolDetailsView({ toolCall, defaultExpanded }: ToolDetailsViewProps) {
   return (
-    <ToolCallExpandable label="Tool Details" className="pl-[19px] py-1">
+    <ToolCallExpandable
+      label="Tool Details"
+      className="pl-[19px] py-1"
+      defaultExpanded={defaultExpanded}
+    >
       {toolCall.arguments && <ToolCallArguments args={toolCall.arguments} />}
     </ToolCallExpandable>
   );

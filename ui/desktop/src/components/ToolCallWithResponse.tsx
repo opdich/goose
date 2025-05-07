@@ -34,24 +34,24 @@ export default function ToolCallWithResponse({
 
 interface ToolCallExpandableProps {
   label: string | React.ReactNode;
-  defaultExpanded?: boolean;
-  forceExpand?: boolean;
+  isStartExpanded?: boolean;
+  isForceExpand?: boolean;
   children: React.ReactNode;
   className?: string;
 }
 
 function ToolCallExpandable({
   label,
-  defaultExpanded = false,
-  forceExpand,
+  isStartExpanded = false,
+  isForceExpand,
   children,
   className = '',
 }: ToolCallExpandableProps) {
-  const [isExpanded, setIsExpanded] = React.useState(defaultExpanded);
+  const [isExpanded, setIsExpanded] = React.useState(isStartExpanded);
   const toggleExpand = () => setIsExpanded((prev) => !prev);
   React.useEffect(() => {
-    if (forceExpand) setIsExpanded(true);
-  }, [forceExpand]);
+    if (isForceExpand) setIsExpanded(true);
+  }, [isForceExpand]);
 
   return (
     <div className={className}>
@@ -90,7 +90,7 @@ function ToolCallView({ isCancelledMessage, toolCall, toolResponse }: ToolCallVi
     ? 'loading'
     : toolResponse?.toolResult.status;
 
-  const toolResults: { result: Content; defaultExpanded: boolean }[] =
+  const toolResults: { result: Content; isExpandToolResults: boolean }[] =
     loadingStatus === 'success' && Array.isArray(toolResponse?.toolResult.value)
       ? toolResponse.toolResult.value
           .filter((item) => {
@@ -99,16 +99,16 @@ function ToolCallView({ isCancelledMessage, toolCall, toolResponse }: ToolCallVi
           })
           .map((item) => ({
             result: item,
-            defaultExpanded: ((item.annotations?.priority as number | undefined) ?? -1) >= 0.5,
+            isExpandToolResults: ((item.annotations?.priority as number | undefined) ?? -1) >= 0.5,
           }))
       : [];
 
-  const shouldExpand = isExpandToolDetails || toolResults.some((v) => v.defaultExpanded);
+  const isShouldExpand = isExpandToolDetails || toolResults.some((v) => v.isExpandToolResults);
 
   return (
     <ToolCallExpandable
-      defaultExpanded={shouldExpand}
-      forceExpand={shouldExpand}
+      isStartExpanded={isShouldExpand}
+      isForceExpand={isShouldExpand}
       label={
         <>
           <Dot size={2} loadingStatus={loadingStatus} />
@@ -121,14 +121,14 @@ function ToolCallView({ isCancelledMessage, toolCall, toolResponse }: ToolCallVi
       {/* Tool Details */}
       {isToolDetails && (
         <div className="bg-bgStandard rounded-t mt-1">
-          <ToolDetailsView toolCall={toolCall} defaultExpanded={isExpandToolDetails} />
+          <ToolDetailsView toolCall={toolCall} isStartExpanded={isExpandToolDetails} />
         </div>
       )}
 
       {/* Tool Output */}
       {!isCancelledMessage && (
         <>
-          {toolResults.map(({ result, defaultExpanded }, index) => {
+          {toolResults.map(({ result, isExpandToolResults }, index) => {
             const isLast = index === toolResults.length - 1;
             return (
               <div
@@ -138,7 +138,7 @@ function ToolCallView({ isCancelledMessage, toolCall, toolResponse }: ToolCallVi
                   ${isLast ? 'rounded-b' : ''}
                 `}
               >
-                <ToolResultView result={result} defaultExpanded={defaultExpanded} />
+                <ToolResultView result={result} isStartExpanded={isExpandToolResults} />
               </div>
             );
           })}
@@ -153,15 +153,15 @@ interface ToolDetailsViewProps {
     name: string;
     arguments: Record<string, unknown>;
   };
-  defaultExpanded: boolean;
+  isStartExpanded: boolean;
 }
 
-function ToolDetailsView({ toolCall, defaultExpanded }: ToolDetailsViewProps) {
+function ToolDetailsView({ toolCall, isStartExpanded }: ToolDetailsViewProps) {
   return (
     <ToolCallExpandable
       label="Tool Details"
       className="pl-[19px] py-1"
-      defaultExpanded={defaultExpanded}
+      isStartExpanded={isStartExpanded}
     >
       {toolCall.arguments && <ToolCallArguments args={toolCall.arguments} />}
     </ToolCallExpandable>
@@ -170,14 +170,14 @@ function ToolDetailsView({ toolCall, defaultExpanded }: ToolDetailsViewProps) {
 
 interface ToolResultViewProps {
   result: Content;
-  defaultExpanded: boolean;
+  isStartExpanded: boolean;
 }
 
-function ToolResultView({ result, defaultExpanded }: ToolResultViewProps) {
+function ToolResultView({ result, isStartExpanded }: ToolResultViewProps) {
   return (
     <ToolCallExpandable
       label={<span className="pl-[19px] py-1">Output</span>}
-      defaultExpanded={defaultExpanded}
+      isStartExpanded={isStartExpanded}
     >
       <div className="bg-bgApp rounded-b pl-[19px] pr-2 py-4">
         {result.type === 'text' && result.text && (

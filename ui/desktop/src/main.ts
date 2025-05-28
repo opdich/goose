@@ -750,14 +750,14 @@ ipcMain.handle('set-dock-icon', async (_event, show: boolean) => {
     saveSettings(settings);
 
     if (show) {
-      app.dock.show();
+      await app.dock.show();
     } else {
       // Only hide the dock if we have a menu bar icon to maintain accessibility
       if (settings.showMenuBarIcon) {
         app.dock.hide();
         setTimeout(() => {
           focusWindow();
-        }, 100);
+        }, 50);
       }
     }
     return true;

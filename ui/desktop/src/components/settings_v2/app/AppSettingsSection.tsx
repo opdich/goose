@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Switch } from '../../ui/switch';
 
 export default function AppSettingsSection() {
   const [menuBarIconEnabled, setMenuBarIconEnabled] = useState(true);
   const [dockIconEnabled, setDockIconEnabled] = useState(true);
   const [isMacOS, setIsMacOS] = useState(false);
+  const [isDockSwitchDisabled, setIsDockSwitchDisabled] = useState(false);
 
   // Check if running on macOS
   useEffect(() => {
@@ -50,6 +51,14 @@ export default function AppSettingsSection() {
         setMenuBarIconEnabled(true);
       }
     }
+
+    // Disable the switch to prevent rapid toggling
+    setIsDockSwitchDisabled(true);
+    setTimeout(() => {
+      setIsDockSwitchDisabled(false);
+    }, 1000);
+
+    // Set the dock icon state
     const success = await window.electron.setDockIcon(newState);
     if (success) {
       setDockIconEnabled(newState);
@@ -88,6 +97,7 @@ export default function AppSettingsSection() {
               </div>
               <div className="flex items-center">
                 <Switch
+                  disabled={isDockSwitchDisabled}
                   checked={dockIconEnabled}
                   onCheckedChange={handleDockIconToggle}
                   variant="mono"

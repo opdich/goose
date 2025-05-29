@@ -1518,11 +1518,6 @@ app.whenReady().then(async () => {
     return false;
   });
 
-  // Handle binary path requests
-  ipcMain.handle('get-binary-path', (_event, binaryName) => {
-    return getBinaryPath(app, binaryName);
-  });
-
   // Handle metadata fetching from main process
   ipcMain.handle('fetch-metadata', async (_event, url) => {
     try {

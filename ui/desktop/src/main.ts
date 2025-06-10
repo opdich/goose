@@ -788,6 +788,29 @@ ipcMain.handle('get-dock-icon-state', () => {
   }
 });
 
+// Handle notifications setting
+ipcMain.handle('set-notifications-enabled', async (_event, enabled: boolean) => {
+  try {
+    const settings = loadSettings();
+    settings.notificationsEnabled = enabled;
+    saveSettings(settings);
+    return true;
+  } catch (error) {
+    console.error('Error setting notifications:', error);
+    return false;
+  }
+});
+
+ipcMain.handle('get-notifications-enabled', () => {
+  try {
+    const settings = loadSettings();
+    return settings.notificationsEnabled ?? true;
+  } catch (error) {
+    console.error('Error getting notifications state:', error);
+    return true;
+  }
+});
+
 // Add file/directory selection handler
 ipcMain.handle('select-file-or-directory', async () => {
   const result = (await dialog.showOpenDialog({
@@ -1440,7 +1463,21 @@ app.whenReady().then(async () => {
     }
   );
 
-  ipcMain.on('notify', (_event, data) => {
+  ipcMain.on('notify', async (_event, data) => {
+    // Check if notifications are enabled in settings
+    let notificationsEnabled = true;
+    try {
+      const settings = loadSettings();
+      notificationsEnabled = settings.notificationsEnabled ?? true;
+    } catch (e) {
+      console.error('Failed to get notifications setting:', e);
+    }
+
+    if (!notificationsEnabled) {
+      console.log('Notifications are disabled, skipping notification');
+      return;
+    }
+
     try {
       // Validate notification data
       if (!data || typeof data !== 'object') {

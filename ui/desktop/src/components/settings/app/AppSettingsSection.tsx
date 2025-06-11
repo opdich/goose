@@ -184,9 +184,41 @@ export default function AppSettingsSection() {
                   <li>Choose your preferred notification style</li>
                 </ol>
               </div>
+            ) : window.electron.platform === 'win32' ? (
+              <div className="space-y-4">
+                <p className="text-textStandard">To enable notifications for Goose on Windows:</p>
+                <ol className="list-decimal list-inside space-y-3 text-textStandard ml-4">
+                  <li>Click the "Open Settings" button</li>
+                  <li>
+                    In the Notifications & actions settings, scroll down to "Get notifications from
+                    these senders"
+                  </li>
+                  <li>Find "Goose" in the list of applications</li>
+                  <li>Click on "Goose" to expand its notification settings</li>
+                  <li>Toggle the main switch to ON to enable notifications</li>
+                  <li>Customize notification banners, sounds, and other preferences as desired</li>
+                </ol>
+              </div>
             ) : (
               <div className="space-y-4">
-                <p className="text-textStandard">Other systems TBD</p>
+                <p className="text-textStandard">To enable notifications for Goose on Linux:</p>
+                <ol className="list-decimal list-inside space-y-3 text-textStandard ml-4">
+                  <li>Click the "Open Settings" button</li>
+                  <li>
+                    In the notification settings panel, look for application-specific settings
+                  </li>
+                  <li>Find "Goose" or "Electron" in the list of applications</li>
+                  <li>Enable notifications for the application</li>
+                  <li>Configure notification preferences such as sound and display options</li>
+                </ol>
+                <div className="mt-4 p-3 bg-bgSubtle rounded-md">
+                  <p className="text-sm text-textSubtle">
+                    <strong>Note:</strong> The exact steps may vary depending on your desktop
+                    environment (GNOME, KDE, XFCE, etc.). If the "Open Settings" button doesn't
+                    work, you can manually access notification settings through your system's
+                    settings application.
+                  </p>
+                </div>
               </div>
             )}
           </div>

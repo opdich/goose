@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Switch } from '../../ui/switch';
+import { Button } from '../../ui/button';
+import { Settings } from 'lucide-react';
 
 export default function AppSettingsSection() {
   const [menuBarIconEnabled, setMenuBarIconEnabled] = useState(true);
@@ -73,16 +75,26 @@ export default function AppSettingsSection() {
       <div className="pb-8">
         <p className="text-sm text-textStandard mb-6">Configure Goose app</p>
         <div>
+          {/* Task Notifications */}
           <div className="flex items-center justify-between mb-4">
             <div>
               <h3 className="text-textStandard">Task Notifications</h3>
               <p className="text-xs text-textSubtle max-w-md mt-[2px]">
-                Show notifications when Goose completes tasks
+                Notifications are managed by your OS.
               </p>
             </div>
-            <div className="flex items-center"></div>
+            <div className="flex items-center">
+              <Button
+                className="flex items-center gap-2 justify-center text-textStandard bg-bgApp border border-borderSubtle hover:border-borderProminent hover:bg-bgApp [&>svg]:!size-4"
+                onClick={() => {}}
+              >
+                <Settings />
+                Open Settings
+              </Button>
+            </div>
           </div>
 
+          {/* Menu Bar */}
           <div className="flex items-center justify-between mb-4">
             <div>
               <h3 className="text-textStandard">Menu Bar Icon</h3>
@@ -99,6 +111,7 @@ export default function AppSettingsSection() {
             </div>
           </div>
 
+          {/* Dock Icon */}
           {isMacOS && (
             <div className="flex items-center justify-between mb-4">
               <div>

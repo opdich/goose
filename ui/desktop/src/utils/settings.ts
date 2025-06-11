@@ -12,7 +12,6 @@ export interface Settings {
   envToggles: EnvToggles;
   showMenuBarIcon: boolean;
   showDockIcon: boolean;
-  notificationsEnabled: boolean;
 }
 
 // Constants
@@ -25,7 +24,6 @@ const defaultSettings: Settings = {
   },
   showMenuBarIcon: true,
   showDockIcon: true,
-  notificationsEnabled: true,
 };
 
 // Settings management

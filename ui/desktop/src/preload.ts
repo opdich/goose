@@ -46,8 +46,6 @@ type ElectronAPI = {
   ) => void;
   logInfo: (txt: string) => void;
   showNotification: (data: NotificationData) => void;
-  setNotificationsEnabled: (enabled: boolean) => Promise<boolean>;
-  getNotificationsEnabled: () => Promise<boolean>;
   openInChrome: (url: string) => void;
   fetchMetadata: (url: string) => Promise<string>;
   reloadApp: () => void;
@@ -110,9 +108,6 @@ const electronAPI: ElectronAPI = {
     ),
   logInfo: (txt: string) => ipcRenderer.send('logInfo', txt),
   showNotification: (data: NotificationData) => ipcRenderer.send('notify', data),
-  setNotificationsEnabled: (enabled: boolean) =>
-    ipcRenderer.invoke('set-notifications-enabled', enabled),
-  getNotificationsEnabled: () => ipcRenderer.invoke('get-notifications-enabled'),
   openInChrome: (url: string) => ipcRenderer.send('open-in-chrome', url),
   fetchMetadata: (url: string) => ipcRenderer.invoke('fetch-metadata', url),
   reloadApp: () => ipcRenderer.send('reload-app'),

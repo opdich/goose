@@ -4,7 +4,6 @@ import { Switch } from '../../ui/switch';
 export default function AppSettingsSection() {
   const [menuBarIconEnabled, setMenuBarIconEnabled] = useState(true);
   const [dockIconEnabled, setDockIconEnabled] = useState(true);
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [isMacOS, setIsMacOS] = useState(false);
   const [isDockSwitchDisabled, setIsDockSwitchDisabled] = useState(false);
 
@@ -25,13 +24,6 @@ export default function AppSettingsSection() {
       });
     }
   }, [isMacOS]);
-
-  // Load notification settings
-  useEffect(() => {
-    window.electron.getNotificationsEnabled().then((enabled) => {
-      setNotificationsEnabled(enabled);
-    });
-  }, []);
 
   const handleMenuBarIconToggle = async () => {
     const newState = !menuBarIconEnabled;
@@ -73,14 +65,6 @@ export default function AppSettingsSection() {
     }
   };
 
-  const handleNotificationsToggle = async () => {
-    const newState = !notificationsEnabled;
-    const success = await window.electron.setNotificationsEnabled(newState);
-    if (success) {
-      setNotificationsEnabled(newState);
-    }
-  };
-
   return (
     <section id="appSettings" className="px-8">
       <div className="flex justify-between items-center mb-2">
@@ -89,6 +73,16 @@ export default function AppSettingsSection() {
       <div className="pb-8">
         <p className="text-sm text-textStandard mb-6">Configure Goose app</p>
         <div>
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-textStandard">Task Notifications</h3>
+              <p className="text-xs text-textSubtle max-w-md mt-[2px]">
+                Show notifications when Goose completes tasks
+              </p>
+            </div>
+            <div className="flex items-center"></div>
+          </div>
+
           <div className="flex items-center justify-between mb-4">
             <div>
               <h3 className="text-textStandard">Menu Bar Icon</h3>
@@ -121,22 +115,6 @@ export default function AppSettingsSection() {
               </div>
             </div>
           )}
-
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="text-textStandard">Task Notifications</h3>
-              <p className="text-xs text-textSubtle max-w-md mt-[2px]">
-                Show notifications when Goose completes tasks
-              </p>
-            </div>
-            <div className="flex items-center">
-              <Switch
-                checked={notificationsEnabled}
-                onCheckedChange={handleNotificationsToggle}
-                variant="mono"
-              />
-            </div>
-          </div>
         </div>
       </div>
     </section>

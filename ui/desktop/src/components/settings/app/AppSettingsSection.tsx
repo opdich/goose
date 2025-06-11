@@ -2,12 +2,14 @@ import { useState, useEffect } from 'react';
 import { Switch } from '../../ui/switch';
 import { Button } from '../../ui/button';
 import { Settings } from 'lucide-react';
+import Modal from '../../Modal';
 
 export default function AppSettingsSection() {
   const [menuBarIconEnabled, setMenuBarIconEnabled] = useState(true);
   const [dockIconEnabled, setDockIconEnabled] = useState(true);
   const [isMacOS, setIsMacOS] = useState(false);
   const [isDockSwitchDisabled, setIsDockSwitchDisabled] = useState(false);
+  const [showNotificationModal, setShowNotificationModal] = useState(false);
 
   // Check if running on macOS
   useEffect(() => {
@@ -78,15 +80,27 @@ export default function AppSettingsSection() {
           {/* Task Notifications */}
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h3 className="text-textStandard">Task Notifications</h3>
+              <h3 className="text-textStandard">Notifications</h3>
               <p className="text-xs text-textSubtle max-w-md mt-[2px]">
-                Notifications are managed by your OS.
+                Notifications are managed by your OS{' - '}
+                <span
+                  className="underline hover:cursor-pointer"
+                  onClick={() => setShowNotificationModal(true)}
+                >
+                  Configuration guide
+                </span>
               </p>
             </div>
             <div className="flex items-center">
               <Button
                 className="flex items-center gap-2 justify-center text-textStandard bg-bgApp border border-borderSubtle hover:border-borderProminent hover:bg-bgApp [&>svg]:!size-4"
-                onClick={() => {}}
+                onClick={async () => {
+                  try {
+                    await window.electron.openNotificationsSettings();
+                  } catch (error) {
+                    console.error('Failed to open notification settings:', error);
+                  }
+                }}
               >
                 <Settings />
                 Open Settings
@@ -130,6 +144,54 @@ export default function AppSettingsSection() {
           )}
         </div>
       </div>
+
+      {/* Notification Instructions Modal */}
+      {showNotificationModal && (
+        <Modal
+          onClose={() => setShowNotificationModal(false)}
+          footer={
+            <Button
+              onClick={() => setShowNotificationModal(false)}
+              variant="ghost"
+              className="w-full h-[60px] rounded-none hover:bg-bgSubtle text-textSubtle hover:text-textStandard text-md font-regular"
+            >
+              Close
+            </Button>
+          }
+        >
+          {/* Title and Icon */}
+          <div className="flex flex-col mb-6">
+            <div>
+              <Settings className="text-iconStandard" size={24} />
+            </div>
+            <div className="mt-2">
+              <h2 className="text-2xl font-regular text-textStandard">
+                How to Enable Notifications
+              </h2>
+            </div>
+          </div>
+
+          {/* Content */}
+          <div>
+            {isMacOS ? (
+              <div className="space-y-4">
+                <p className="text-textStandard">To enable notifications for Goose on macOS:</p>
+                <ol className="list-decimal list-inside space-y-3 text-textStandard ml-4">
+                  <li>Click the "Open Settings" button</li>
+                  <li>Find "Goose" in the list of applications</li>
+                  <li>Click on "Goose" to open its notification settings</li>
+                  <li>Toggle "Allow Notifications" to ON</li>
+                  <li>Choose your preferred notification style</li>
+                </ol>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <p className="text-textStandard">Other systems TBD</p>
+              </div>
+            )}
+          </div>
+        </Modal>
+      )}
     </section>
   );
 }

@@ -788,6 +788,23 @@ ipcMain.handle('get-dock-icon-state', () => {
   }
 });
 
+// Handle opening system notifications preferences
+ipcMain.handle('open-notifications-settings', async () => {
+  try {
+    if (process.platform === 'darwin') {
+      spawn('open', ['x-apple.systempreferences:com.apple.preference.notifications']);
+      return true;
+    } else {
+      // For now, we only support macOS for this feature
+      console.warn('Opening notification settings is only supported on macOS');
+      return false;
+    }
+  } catch (error) {
+    console.error('Error opening notification settings:', error);
+    return false;
+  }
+});
+
 // Add file/directory selection handler
 ipcMain.handle('select-file-or-directory', async () => {
   const result = (await dialog.showOpenDialog({

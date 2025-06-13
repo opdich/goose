@@ -1,20 +1,36 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Switch } from '../../ui/switch';
 import { Button } from '../../ui/button';
 import { Settings } from 'lucide-react';
 import Modal from '../../Modal';
+import UpdateSection from './UpdateSection';
 
-export default function AppSettingsSection() {
+interface AppSettingsSectionProps {
+  scrollToSection?: string;
+}
+
+export default function AppSettingsSection({ scrollToSection }: AppSettingsSectionProps) {
   const [menuBarIconEnabled, setMenuBarIconEnabled] = useState(true);
   const [dockIconEnabled, setDockIconEnabled] = useState(true);
   const [isMacOS, setIsMacOS] = useState(false);
   const [isDockSwitchDisabled, setIsDockSwitchDisabled] = useState(false);
   const [showNotificationModal, setShowNotificationModal] = useState(false);
+  const updateSectionRef = useRef<HTMLDivElement>(null);
 
   // Check if running on macOS
   useEffect(() => {
     setIsMacOS(window.electron.platform === 'darwin');
   }, []);
+
+  // Handle scrolling to update section
+  useEffect(() => {
+    if (scrollToSection === 'update' && updateSectionRef.current) {
+      // Use a timeout to ensure the DOM is ready
+      setTimeout(() => {
+        updateSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 100);
+    }
+  }, [scrollToSection]);
 
   // Load menu bar and dock icon states
   useEffect(() => {
@@ -142,6 +158,11 @@ export default function AppSettingsSection() {
               </div>
             </div>
           )}
+        </div>
+
+        {/* Update Section */}
+        <div ref={updateSectionRef} className="mt-8 pt-8 border-t border-gray-200">
+          <UpdateSection />
         </div>
       </div>
 

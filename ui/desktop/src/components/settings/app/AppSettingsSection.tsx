@@ -15,11 +15,31 @@ export default function AppSettingsSection({ scrollToSection }: AppSettingsSecti
   const [isMacOS, setIsMacOS] = useState(false);
   const [isDockSwitchDisabled, setIsDockSwitchDisabled] = useState(false);
   const [showNotificationModal, setShowNotificationModal] = useState(false);
+  const [updatesEnabled, setUpdatesEnabled] = useState(false);
   const updateSectionRef = useRef<HTMLDivElement>(null);
 
   // Check if running on macOS
   useEffect(() => {
     setIsMacOS(window.electron.platform === 'darwin');
+  }, []);
+
+  // Load updater state
+  useEffect(() => {
+    window.electron.getUpdaterEnabled().then((enabled) => {
+      setUpdatesEnabled(enabled);
+    });
+
+    // Listen for updater state changes
+    const handleUpdaterStateChange = (enabled: boolean) => {
+      setUpdatesEnabled(enabled);
+    };
+
+    window.electron.onUpdaterStateChanged(handleUpdaterStateChange);
+
+    // Cleanup listener on unmount
+    return () => {
+      window.electron.removeUpdaterStateListener(handleUpdaterStateChange);
+    };
   }, []);
 
   // Handle scrolling to update section
@@ -161,9 +181,11 @@ export default function AppSettingsSection({ scrollToSection }: AppSettingsSecti
         </div>
 
         {/* Update Section */}
-        <div ref={updateSectionRef} className="mt-8 pt-8 border-t border-gray-200">
-          <UpdateSection />
-        </div>
+        {updatesEnabled && (
+          <div ref={updateSectionRef} className="mt-8 pt-8 border-t border-gray-200">
+            <UpdateSection />
+          </div>
+        )}
       </div>
 
       {/* Notification Instructions Modal */}

@@ -3,7 +3,6 @@ import { compareVersions } from 'compare-versions';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as os from 'os';
-import { spawn } from 'child_process';
 import log from './logger';
 
 interface GitHubRelease {
@@ -190,93 +189,8 @@ export class GitHubUpdater {
 
       log.info(`GitHubUpdater: Update downloaded to ${downloadPath}`);
 
-      // Auto-unzip the downloaded file
-      try {
-        const tempExtractDir = path.join(downloadsDir, `temp-extract-${Date.now()}`);
-
-        // Create temp extraction directory
-        await fs.mkdir(tempExtractDir, { recursive: true });
-
-        // Use unzip command to extract
-        log.info(`GitHubUpdater: Extracting ${fileName} to temp directory`);
-
-        const unzipProcess = spawn('unzip', ['-o', downloadPath, '-d', tempExtractDir]);
-
-        let stderr = '';
-        unzipProcess.stderr.on('data', (data) => {
-          stderr += data.toString();
-        });
-
-        await new Promise<void>((resolve, reject) => {
-          unzipProcess.on('close', (code) => {
-            if (code === 0) {
-              resolve();
-            } else {
-              reject(new Error(`Unzip process exited with code ${code}`));
-            }
-          });
-
-          unzipProcess.on('error', (err) => {
-            reject(err);
-          });
-        });
-
-        if (stderr && !stderr.includes('warning')) {
-          log.warn(`GitHubUpdater: Unzip stderr: ${stderr}`);
-        }
-
-        // Check if Goose.app exists in the extracted content
-        const appPath = path.join(tempExtractDir, 'Goose.app');
-        try {
-          await fs.access(appPath);
-          log.info(`GitHubUpdater: Found Goose.app at ${appPath}`);
-        } catch (error) {
-          log.error('GitHubUpdater: Goose.app not found in extracted content');
-          throw new Error('Goose.app not found in extracted content');
-        }
-
-        // Move Goose.app to Downloads folder
-        const finalAppPath = path.join(downloadsDir, 'Goose.app');
-
-        // Remove existing Goose.app if it exists
-        try {
-          await fs.rm(finalAppPath, { recursive: true, force: true });
-        } catch (e) {
-          // File might not exist, that's fine
-        }
-
-        // Move the app to Downloads
-        log.info(`GitHubUpdater: Moving Goose.app to Downloads folder`);
-        await fs.rename(appPath, finalAppPath);
-
-        // Verify the move was successful
-        try {
-          await fs.access(finalAppPath);
-          log.info(`GitHubUpdater: Successfully moved Goose.app to Downloads`);
-        } catch (error) {
-          log.error('GitHubUpdater: Failed to move Goose.app');
-          throw new Error('Failed to move Goose.app to Downloads');
-        }
-
-        // Clean up temp directory and zip file
-        try {
-          await fs.rm(tempExtractDir, { recursive: true, force: true });
-          await fs.unlink(downloadPath);
-          log.info(`GitHubUpdater: Cleaned up temporary files`);
-        } catch (cleanupError) {
-          log.warn(`GitHubUpdater: Failed to clean up temporary files: ${cleanupError}`);
-        }
-
-        return { success: true, downloadPath: finalAppPath, extractedPath: downloadsDir };
-      } catch (unzipError) {
-        log.error('GitHubUpdater: Error extracting update:', unzipError);
-        // Still return success for download, but note the extraction error
-        return {
-          success: true,
-          downloadPath,
-          error: `Downloaded successfully but extraction failed: ${unzipError instanceof Error ? unzipError.message : 'Unknown error'}`,
-        };
-      }
+      // Return success - user will handle extraction manually
+      return { success: true, downloadPath, extractedPath: downloadsDir };
     } catch (error) {
       log.error('GitHubUpdater: Error downloading update:', error);
       return {

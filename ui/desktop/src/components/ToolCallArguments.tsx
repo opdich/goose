@@ -39,20 +39,24 @@ export function ToolCallArguments({ args }: ToolCallArgumentsProps) {
 
       return (
         <div className="text-sm mb-2">
-          <div className="flex flex-row">
-            <span className="text-textSubtle min-w-[140px]">{key}</span>
+          <div className="flex flex-row items-start">
+            <button
+              onClick={() => toggleKey(key)}
+              className="text-left text-textSubtle min-w-[140px]"
+            >
+              {key}
+            </button>
             <div className="w-full flex justify-between items-start">
               {isExpanded ? (
                 <div className="">
                   <MarkdownContent content={value} className="text-sm text-textPlaceholder" />
                 </div>
               ) : (
-                <span className="text-textPlaceholder mr-2">{value.slice(0, 60)}...</span>
+                <button onClick={() => toggleKey(key)} className="text-textPlaceholder mr-2">
+                  {value.slice(0, 60)}...
+                </button>
               )}
-              <button
-                onClick={() => toggleKey(key)}
-                className="hover:opacity-75 text-textPlaceholder pr-2"
-              >
+              <button onClick={() => toggleKey(key)} className="text-textPlaceholder pr-2">
                 <Expand size={5} isExpanded={isExpanded} />
               </button>
             </div>

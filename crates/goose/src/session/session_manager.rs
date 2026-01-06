@@ -19,7 +19,7 @@ use tokio::sync::OnceCell;
 use tracing::{info, warn};
 use utoipa::ToSchema;
 
-pub const CURRENT_SCHEMA_VERSION: i32 = 6;
+pub const CURRENT_SCHEMA_VERSION: i32 = 7;
 pub const SESSIONS_FOLDER: &str = "sessions";
 pub const DB_NAME: &str = "sessions.db";
 
@@ -363,6 +363,45 @@ impl SessionManager {
             .search_chat_history(query, limit, after_date, before_date, exclude_session_id)
             .await
     }
+
+    pub async fn create_note(title: String, content: String) -> Result<String> {
+        Self::instance().await?.create_note(title, content).await
+    }
+
+    pub async fn get_note(note_id: &str) -> Result<(String, String, String)> {
+        Self::instance().await?.get_note(note_id).await
+    }
+
+    pub async fn list_notes() -> Result<Vec<(String, String, DateTime<Utc>)>> {
+        Self::instance().await?.list_notes().await
+    }
+
+    pub async fn update_note(note_id: &str, title: String, content: String) -> Result<()> {
+        Self::instance()
+            .await?
+            .update_note(note_id, title, content)
+            .await
+    }
+
+    pub async fn delete_note(note_id: &str) -> Result<()> {
+        Self::instance().await?.delete_note(note_id).await
+    }
+
+    pub async fn add_note_citation(
+        note_id: &str,
+        session_id: &str,
+        message_id: &str,
+        citation_index: i32,
+    ) -> Result<()> {
+        Self::instance()
+            .await?
+            .add_note_citation(note_id, session_id, message_id, citation_index)
+            .await
+    }
+
+    pub async fn get_note_citations(note_id: &str) -> Result<Vec<(String, String, String, i32)>> {
+        Self::instance().await?.get_note_citations(note_id).await
+    }
 }
 
 pub struct SessionStorage {
@@ -597,6 +636,41 @@ impl SessionStorage {
             .execute(&pool)
             .await?;
         sqlx::query("CREATE INDEX idx_sessions_type ON sessions(session_type)")
+            .execute(&pool)
+            .await?;
+
+        sqlx::query(
+            r#"
+            CREATE TABLE notes (
+                id TEXT PRIMARY KEY,
+                title TEXT NOT NULL,
+                content TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        "#,
+        )
+        .execute(&pool)
+        .await?;
+
+        sqlx::query(
+            r#"
+            CREATE TABLE note_citations (
+                id TEXT PRIMARY KEY,
+                note_id TEXT NOT NULL REFERENCES notes(id) ON DELETE CASCADE,
+                session_id TEXT NOT NULL REFERENCES sessions(id),
+                message_id TEXT NOT NULL,
+                citation_index INTEGER NOT NULL
+            )
+        "#,
+        )
+        .execute(&pool)
+        .await?;
+
+        sqlx::query("CREATE INDEX idx_note_citations_note ON note_citations(note_id)")
+            .execute(&pool)
+            .await?;
+        sqlx::query("CREATE INDEX idx_notes_updated ON notes(updated_at DESC)")
             .execute(&pool)
             .await?;
 
@@ -837,6 +911,42 @@ impl SessionStorage {
                 )
                 .execute(&self.pool)
                 .await?;
+            }
+            7 => {
+                sqlx::query(
+                    r#"
+                    CREATE TABLE notes (
+                        id TEXT PRIMARY KEY,
+                        title TEXT NOT NULL,
+                        content TEXT NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                "#,
+                )
+                .execute(&self.pool)
+                .await?;
+
+                sqlx::query(
+                    r#"
+                    CREATE TABLE note_citations (
+                        id TEXT PRIMARY KEY,
+                        note_id TEXT NOT NULL REFERENCES notes(id) ON DELETE CASCADE,
+                        session_id TEXT NOT NULL REFERENCES sessions(id),
+                        message_id TEXT NOT NULL,
+                        citation_index INTEGER NOT NULL
+                    )
+                "#,
+                )
+                .execute(&self.pool)
+                .await?;
+
+                sqlx::query("CREATE INDEX idx_note_citations_note ON note_citations(note_id)")
+                    .execute(&self.pool)
+                    .await?;
+                sqlx::query("CREATE INDEX idx_notes_updated ON notes(updated_at DESC)")
+                    .execute(&self.pool)
+                    .await?;
             }
             _ => {
                 anyhow::bail!("Unknown migration version: {}", version);
@@ -1303,6 +1413,126 @@ impl SessionStorage {
         )
         .execute()
         .await
+    }
+
+    pub async fn create_note(&self, title: String, content: String) -> Result<String> {
+        let note_id = format!("note_{}", chrono::Utc::now().timestamp_millis());
+        
+        sqlx::query(
+            r#"
+            INSERT INTO notes (id, title, content)
+            VALUES (?, ?, ?)
+        "#,
+        )
+        .bind(&note_id)
+        .bind(&title)
+        .bind(&content)
+        .execute(&self.pool)
+        .await?;
+
+        Ok(note_id)
+    }
+
+    pub async fn get_note(&self, note_id: &str) -> Result<(String, String, String)> {
+        let row = sqlx::query_as::<_, (String, String, String)>(
+            r#"
+            SELECT id, title, content
+            FROM notes
+            WHERE id = ?
+        "#,
+        )
+        .bind(note_id)
+        .fetch_one(&self.pool)
+        .await?;
+
+        Ok(row)
+    }
+
+    pub async fn list_notes(&self) -> Result<Vec<(String, String, DateTime<Utc>)>> {
+        let rows = sqlx::query_as::<_, (String, String, DateTime<Utc>)>(
+            r#"
+            SELECT id, title, updated_at
+            FROM notes
+            ORDER BY updated_at DESC
+        "#,
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(rows)
+    }
+
+    pub async fn update_note(&self, note_id: &str, title: String, content: String) -> Result<()> {
+        sqlx::query(
+            r#"
+            UPDATE notes
+            SET title = ?, content = ?, updated_at = datetime('now')
+            WHERE id = ?
+        "#,
+        )
+        .bind(&title)
+        .bind(&content)
+        .bind(note_id)
+        .execute(&self.pool)
+        .await?;
+
+        Ok(())
+    }
+
+    pub async fn delete_note(&self, note_id: &str) -> Result<()> {
+        sqlx::query("DELETE FROM notes WHERE id = ?")
+            .bind(note_id)
+            .execute(&self.pool)
+            .await?;
+
+        Ok(())
+    }
+
+    pub async fn add_note_citation(
+        &self,
+        note_id: &str,
+        session_id: &str,
+        message_id: &str,
+        citation_index: i32,
+    ) -> Result<()> {
+        let citation_id = format!(
+            "cite_{}_{}_{}", 
+            note_id, 
+            citation_index, 
+            chrono::Utc::now().timestamp_nanos_opt().unwrap_or(0)
+        );
+        
+        sqlx::query(
+            r#"
+            INSERT INTO note_citations (id, note_id, session_id, message_id, citation_index)
+            VALUES (?, ?, ?, ?, ?)
+        "#,
+        )
+        .bind(&citation_id)
+        .bind(note_id)
+        .bind(session_id)
+        .bind(message_id)
+        .bind(citation_index)
+        .execute(&self.pool)
+        .await?;
+
+        Ok(())
+    }
+
+    pub async fn get_note_citations(&self, note_id: &str) -> Result<Vec<(String, String, String, i32)>> {
+        let rows = sqlx::query_as::<_, (String, String, String, i32)>(
+            r#"
+            SELECT id, session_id, message_id, citation_index
+            FROM note_citations
+            WHERE note_id = ?
+            ORDER BY citation_index
+        "#,
+        )
+        .bind(note_id)
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(rows)
     }
 }
 

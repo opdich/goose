@@ -122,6 +122,15 @@ export type Content = RawTextContent | RawImageContent | RawEmbeddedResource | R
 
 export type Conversation = Array<Message>;
 
+export type CreateNoteRequest = {
+    session_ids: Array<string>;
+    title?: string | null;
+};
+
+export type CreateNoteResponse = {
+    note: Note;
+};
+
 export type CreateRecipeRequest = {
     author?: AuthorRequest | null;
     session_id: string;
@@ -353,6 +362,13 @@ export type FrontendToolRequest = {
     };
 };
 
+export type GetNoteResponse = {
+    citations: Array<NoteCitationResponse>;
+    content: string;
+    id: string;
+    title: string;
+};
+
 export type GetToolsQuery = {
     extension_name?: string | null;
     session_id: string;
@@ -391,6 +407,10 @@ export type JsonObject = {
 
 export type KillJobResponse = {
     message: string;
+};
+
+export type ListNotesResponse = {
+    notes: Array<NoteListItem>;
 };
 
 export type ListRecipeResponse = {
@@ -554,6 +574,31 @@ export type ModelInfo = {
      * Whether this model supports cache control
      */
     supports_cache_control?: boolean | null;
+};
+
+export type Note = {
+    citations: Array<NoteCitation>;
+    content: string;
+    id: string;
+    title: string;
+};
+
+export type NoteCitation = {
+    citation_index: number;
+    message_id: string;
+    session_id: string;
+};
+
+export type NoteCitationResponse = {
+    citation_index: number;
+    message_id: string;
+    session_id: string;
+};
+
+export type NoteListItem = {
+    id: string;
+    title: string;
+    updated_at: string;
 };
 
 export type ParseRecipeRequest = {
@@ -1112,6 +1157,11 @@ export type UpdateCustomProviderRequest = {
 
 export type UpdateFromSessionRequest = {
     session_id: string;
+};
+
+export type UpdateNoteRequest = {
+    content: string;
+    title: string;
 };
 
 export type UpdateProviderRequest = {
@@ -2066,6 +2116,162 @@ export type McpUiProxyErrors = {
 export type McpUiProxyResponses = {
     /**
      * MCP UI proxy HTML page
+     */
+    200: unknown;
+};
+
+export type CreateNoteData = {
+    body: CreateNoteRequest;
+    path?: never;
+    query?: never;
+    url: '/notes/create';
+};
+
+export type CreateNoteErrors = {
+    /**
+     * Bad request
+     */
+    400: ErrorResponse;
+    /**
+     * Internal server error
+     */
+    500: ErrorResponse;
+};
+
+export type CreateNoteError = CreateNoteErrors[keyof CreateNoteErrors];
+
+export type CreateNoteResponses = {
+    /**
+     * Note created successfully
+     */
+    200: CreateNoteResponse;
+};
+
+export type CreateNoteResponse2 = CreateNoteResponses[keyof CreateNoteResponses];
+
+export type ListNotesData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/notes/list';
+};
+
+export type ListNotesErrors = {
+    /**
+     * Internal server error
+     */
+    500: ErrorResponse;
+};
+
+export type ListNotesError = ListNotesErrors[keyof ListNotesErrors];
+
+export type ListNotesResponses = {
+    /**
+     * Notes retrieved successfully
+     */
+    200: ListNotesResponse;
+};
+
+export type ListNotesResponse2 = ListNotesResponses[keyof ListNotesResponses];
+
+export type DeleteNoteData = {
+    body?: never;
+    path: {
+        /**
+         * Note ID
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/notes/{id}';
+};
+
+export type DeleteNoteErrors = {
+    /**
+     * Note not found
+     */
+    404: ErrorResponse;
+    /**
+     * Internal server error
+     */
+    500: ErrorResponse;
+};
+
+export type DeleteNoteError = DeleteNoteErrors[keyof DeleteNoteErrors];
+
+export type DeleteNoteResponses = {
+    /**
+     * Note deleted successfully
+     */
+    200: unknown;
+};
+
+export type GetNoteData = {
+    body?: never;
+    path: {
+        /**
+         * Note ID
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/notes/{id}';
+};
+
+export type GetNoteErrors = {
+    /**
+     * Note not found
+     */
+    404: ErrorResponse;
+    /**
+     * Internal server error
+     */
+    500: ErrorResponse;
+};
+
+export type GetNoteError = GetNoteErrors[keyof GetNoteErrors];
+
+export type GetNoteResponses = {
+    /**
+     * Note retrieved successfully
+     */
+    200: GetNoteResponse;
+};
+
+export type GetNoteResponse2 = GetNoteResponses[keyof GetNoteResponses];
+
+export type UpdateNoteData = {
+    body: UpdateNoteRequest;
+    path: {
+        /**
+         * Note ID
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/notes/{id}';
+};
+
+export type UpdateNoteErrors = {
+    /**
+     * Bad request
+     */
+    400: ErrorResponse;
+    /**
+     * Note not found
+     */
+    404: ErrorResponse;
+    /**
+     * Internal server error
+     */
+    500: ErrorResponse;
+};
+
+export type UpdateNoteError = UpdateNoteErrors[keyof UpdateNoteErrors];
+
+export type UpdateNoteResponses = {
+    /**
+     * Note updated successfully
      */
     200: unknown;
 };

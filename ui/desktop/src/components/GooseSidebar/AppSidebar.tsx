@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { FileText, Clock, Home, Puzzle, History } from 'lucide-react';
+import { FileText, Clock, Home, Puzzle, History, Notebook } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import {
   SidebarContent,
@@ -61,6 +61,13 @@ const menuItems: NavigationEntry[] = [
     label: 'History',
     icon: History,
     tooltip: 'View your session history',
+  },
+  {
+    type: 'item',
+    path: '/notes',
+    label: 'Notes',
+    icon: Notebook,
+    tooltip: 'View your notes',
   },
   { type: 'separator' },
   {

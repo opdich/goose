@@ -9,6 +9,7 @@ pub mod hints;
 pub mod logging;
 pub mod mcp_utils;
 pub mod model;
+pub mod notes;
 pub mod oauth;
 pub mod permission;
 pub mod posthog;

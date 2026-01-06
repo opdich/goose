@@ -38,6 +38,9 @@ import PermissionSettingsView from './components/settings/permission/PermissionS
 
 import ExtensionsView, { ExtensionsViewOptions } from './components/extensions/ExtensionsView';
 import RecipesView from './components/recipes/RecipesView';
+import { NotesList } from './components/notes/NotesList';
+import { NoteEditor } from './components/notes/NoteEditor';
+import { CreateNoteModal } from './components/notes/CreateNoteModal';
 import { View, ViewOptions } from './utils/navigationUtils';
 import { NoProviderOrModelError, useAgent } from './hooks/useAgent';
 import { useNavigation } from './hooks/useNavigation';
@@ -202,6 +205,18 @@ const SettingsRoute = () => {
 
 const SessionsRoute = () => {
   return <SessionsView />;
+};
+
+const NotesListRoute = () => {
+  return <NotesList />;
+};
+
+const NoteEditorRoute = () => {
+  return <NoteEditor />;
+};
+
+const CreateNoteRoute = () => {
+  return <CreateNoteModal />;
 };
 
 const SchedulesRoute = () => {
@@ -654,6 +669,9 @@ export function AppInner() {
               }
             />
             <Route path="sessions" element={<SessionsRoute />} />
+            <Route path="notes" element={<NotesListRoute />} />
+            <Route path="notes/create" element={<CreateNoteRoute />} />
+            <Route path="notes/:id" element={<NoteEditorRoute />} />
             <Route path="schedules" element={<SchedulesRoute />} />
             <Route path="recipes" element={<RecipesRoute />} />
             <Route

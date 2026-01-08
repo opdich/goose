@@ -3,7 +3,6 @@ import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { Save, X } from 'lucide-react';
 import { getNote, updateNote as updateNoteApi } from '../../api/sdk.gen';
 import { Button } from '../ui/button';
-import { Input } from '../ui/input';
 import MarkdownContent from '../MarkdownContent';
 import { ScrollArea } from '../ui/scroll-area';
 
@@ -19,7 +18,6 @@ export const NoteEditor: React.FC = () => {
   const [note, setNote] = useState<{ id: string; title: string; content: string } | null>(null);
   const [citations, setCitations] = useState<Citation[]>([]);
   const [editing, setEditing] = useState(false);
-  const [editedTitle, setEditedTitle] = useState('');
   const [editedContent, setEditedContent] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -42,7 +40,6 @@ export const NoteEditor: React.FC = () => {
             content: response.data.content,
           };
           setNote(noteData);
-          setEditedTitle(noteData.title);
           setEditedContent(noteData.content);
 
           // Load citations
@@ -142,14 +139,20 @@ export const NoteEditor: React.FC = () => {
     try {
       setSaving(true);
       setError(null);
+
+      // Extract title from first line if it's an H1
+      const lines = editedContent.split('\n');
+      const firstLine = lines[0] || '';
+      const extractedTitle = firstLine.startsWith('# ') ? firstLine.slice(2).trim() : note.title; // Fallback to existing title if no H1 found
+
       await updateNoteApi({
         path: { id },
         body: {
-          title: editedTitle,
+          title: extractedTitle,
           content: editedContent,
         },
       });
-      setNote({ ...note, title: editedTitle, content: editedContent });
+      setNote({ ...note, title: extractedTitle, content: editedContent });
       setEditing(false);
     } catch (err) {
       console.error('Error saving note:', err);
@@ -161,7 +164,6 @@ export const NoteEditor: React.FC = () => {
 
   const handleCancel = () => {
     if (note) {
-      setEditedTitle(note.title);
       setEditedContent(note.content);
     }
     setEditing(false);
@@ -185,72 +187,61 @@ export const NoteEditor: React.FC = () => {
   }
 
   return (
-    <div className="h-full min-h-0">
-      <ScrollArea className="h-full">
-        <div className="container mx-auto px-6 py-4 max-w-4xl">
-          {editing && (
-            <div className="flex justify-end gap-2 mb-4">
-              <Button variant="outline" onClick={handleCancel} disabled={saving}>
-                <X className="w-4 h-4 mr-2" />
-                Cancel
-              </Button>
-              <Button onClick={handleSave} disabled={saving}>
-                <Save className="w-4 h-4 mr-2" />
-                {saving ? 'Saving...' : 'Save'}
-              </Button>
-            </div>
-          )}
+    <div className="h-full flex flex-col min-h-0">
+      {editing && (
+        <div className="px-8 pt-4 pb-2 flex-shrink-0 flex justify-end gap-2">
+          <Button variant="outline" size="sm" onClick={handleCancel} disabled={saving}>
+            <X className="w-4 h-4 mr-2" />
+            Cancel
+          </Button>
+          <Button size="sm" onClick={handleSave} disabled={saving}>
+            <Save className="w-4 h-4 mr-2" />
+            {saving ? 'Saving...' : 'Save'}
+          </Button>
+        </div>
+      )}
 
-          {editing ? (
-            <div className="space-y-4">
-              <div>
-                <Input
-                  value={editedTitle}
-                  onChange={(e) => setEditedTitle(e.target.value)}
-                  placeholder="Note title"
-                  className="text-2xl font-bold"
-                />
-              </div>
-              <div>
-                <textarea
-                  value={editedContent}
-                  onChange={(e) => setEditedContent(e.target.value)}
-                  placeholder="Note content (Markdown supported)"
-                  className="w-full min-h-[500px] font-mono border border-borderSubtle rounded-md p-3 bg-background-default text-textStandard"
-                />
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <h1 className="text-3xl font-bold">{note.title}</h1>
+      <div className="flex-1 min-h-0 relative px-8">
+        <ScrollArea className="h-full">
+          <div className="max-w-4xl pb-4 pt-4">
+            {editing ? (
+              <textarea
+                value={editedContent}
+                onChange={(e) => setEditedContent(e.target.value)}
+                placeholder="# Note Title\n\nNote content (Markdown supported)"
+                className="w-full min-h-[500px] font-mono border border-borderSubtle rounded-md p-3 bg-background-default text-textStandard"
+              />
+            ) : (
               <div
                 ref={contentRef}
                 className="prose prose-sm max-w-none"
                 style={{
-                  // Make citation links look clickable
                   cursor: 'default',
                 }}
               >
                 <MarkdownContent content={note.content} />
               </div>
-              <style>{`
-                .prose a[href^="#cite-"] {
-                  cursor: pointer;
-                  color: #3b82f6;
-                  text-decoration: none;
-                  font-weight: 600;
-                  transition: opacity 0.2s;
-                  user-select: none;
-                }
-                .prose a[href^="#cite-"]:hover {
-                  opacity: 0.7;
-                  text-decoration: underline;
-                }
-              `}</style>
-            </div>
-          )}
-        </div>
-      </ScrollArea>
+            )}
+            <style>{`
+              .prose a[href^="#cite-"] {
+                cursor: pointer;
+                color: #3b82f6;
+                text-decoration: none;
+                font-weight: 600;
+                transition: opacity 0.2s;
+                user-select: none;
+                vertical-align: super;
+                font-size: 0.75em;
+                line-height: 0;
+              }
+              .prose a[href^="#cite-"]:hover {
+                opacity: 0.7;
+                text-decoration: underline;
+              }
+            `}</style>
+          </div>
+        </ScrollArea>
+      </div>
     </div>
   );
 };

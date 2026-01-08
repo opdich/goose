@@ -93,7 +93,7 @@ const AppLayoutContent: React.FC = () => {
     };
 
     return (
-      <div className="flex flex-col flex-1 w-full relative animate-fade-in">
+      <div className="flex flex-col flex-1 w-full h-full relative animate-fade-in bg-background-default">
         <div className={`${headerPadding} pt-3 pb-3 flex items-center relative z-100`}>
           <Button
             onClick={() => navigate('/notes')}

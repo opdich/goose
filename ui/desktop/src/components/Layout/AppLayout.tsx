@@ -11,6 +11,7 @@ const AppLayoutContent: React.FC = () => {
   const location = useLocation();
   const safeIsMacOS = (window?.electron?.platform || 'darwin') === 'darwin';
   const { isMobile, openMobile } = useSidebar();
+  const [showNoteTitle, setShowNoteTitle] = React.useState(false);
 
   // Detect if we're in a notes window (has mainWindowId set)
   const isNotesWindow = React.useMemo(() => {
@@ -81,39 +82,73 @@ const AppLayoutContent: React.FC = () => {
     );
   };
 
+  // Listen for scroll events from NoteEditor (must be at top level, not conditional)
+  React.useEffect(() => {
+    if (!isNotesWindow) {
+      return undefined;
+    }
+
+    const isNotesList = location.pathname === '/notes';
+    const isCreateNote = location.pathname === '/notes/create';
+    const isViewingNote = !isNotesList && !isCreateNote;
+
+    if (!isViewingNote) {
+      setShowNoteTitle(false);
+      return undefined;
+    }
+
+    const handleNoteScroll = (e: Event) => {
+      const customEvent = e as CustomEvent<{ scrolled: boolean; title: string }>;
+      setShowNoteTitle(customEvent.detail.scrolled);
+    };
+
+    window.addEventListener('note-scroll', handleNoteScroll);
+    return () => window.removeEventListener('note-scroll', handleNoteScroll);
+  }, [isNotesWindow, location.pathname]);
+
   // Notes window layout - simplified without sidebar
   if (isNotesWindow) {
     const isNotesList = location.pathname === '/notes';
     const isCreateNote = location.pathname === '/notes/create';
     const isViewingNote = !isNotesList && !isCreateNote;
+    const noteTitle = location.state?.noteTitle;
 
     const handleEditCurrentNote = () => {
       // Navigate to the same note with edit flag in state
-      navigate(location.pathname, { state: { edit: true } });
+      navigate(location.pathname, { state: { edit: true, noteTitle } });
     };
 
     return (
       <div className="flex flex-col flex-1 w-full h-full relative animate-fade-in bg-background-default">
-        <div className={`${headerPadding} pt-3 pb-3 flex items-center relative z-100`}>
-          <Button
-            onClick={() => navigate('/notes')}
-            className="no-drag hover:!bg-background-medium"
-            variant="ghost"
-            size="xs"
-            title="Go to notes"
-          >
-            <Notebook className="w-4 h-4" />
-          </Button>
-          {isViewingNote && (
+        <div
+          className={`${headerPadding} pt-3 pb-3 flex items-center justify-between relative z-100 transition-all duration-200`}
+        >
+          <div className="flex items-center gap-2">
             <Button
-              onClick={handleEditCurrentNote}
+              onClick={() => navigate('/notes')}
               className="no-drag hover:!bg-background-medium"
               variant="ghost"
               size="xs"
-              title="Edit note"
+              title="Go to notes"
             >
-              <NotebookPen className="w-4 h-4" />
+              <Notebook className="w-4 h-4" />
             </Button>
+            {isViewingNote && (
+              <Button
+                onClick={handleEditCurrentNote}
+                className="no-drag hover:!bg-background-medium"
+                variant="ghost"
+                size="xs"
+                title="Edit note"
+              >
+                <NotebookPen className="w-4 h-4" />
+              </Button>
+            )}
+          </div>
+          {isViewingNote && showNoteTitle && noteTitle && (
+            <h2 className="text-sm text-text-standard truncate max-w-md mr-4 transition-opacity duration-200">
+              {noteTitle}
+            </h2>
           )}
         </div>
         <div className="flex-1 overflow-hidden">

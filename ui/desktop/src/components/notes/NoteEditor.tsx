@@ -24,6 +24,7 @@ export const NoteEditor: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
   const contentRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -41,6 +42,9 @@ export const NoteEditor: React.FC = () => {
           };
           setNote(noteData);
           setEditedContent(noteData.content);
+
+          // Store note title in location state for AppLayout to access
+          navigate(location.pathname, { replace: true, state: { noteTitle: noteData.title } });
 
           // Load citations
           if (response.data.citations) {
@@ -66,16 +70,39 @@ export const NoteEditor: React.FC = () => {
     };
 
     loadNote();
-  }, [id]);
+  }, [id, navigate, location.pathname]);
 
   // Check if we should enter edit mode (from top bar button)
   useEffect(() => {
     if (location.state?.edit && note) {
       setEditing(true);
-      // Clear the state so it doesn't trigger again
-      navigate(location.pathname, { replace: true, state: {} });
+      // Clear the edit flag but keep noteTitle
+      navigate(location.pathname, { replace: true, state: { noteTitle: note.title } });
     }
   }, [location.state, note, navigate, location.pathname]);
+
+  // Monitor scroll position and dispatch event for AppLayout
+  useEffect(() => {
+    const handleScroll = (e: Event) => {
+      const target = e.target as HTMLElement;
+      const scrolled = target.scrollTop > 100;
+
+      // Dispatch custom event for AppLayout to listen to
+      window.dispatchEvent(
+        new CustomEvent('note-scroll', {
+          detail: { scrolled, title: note?.title },
+        })
+      );
+    };
+
+    const scrollViewport = scrollRef.current?.querySelector('[data-radix-scroll-area-viewport]');
+    if (scrollViewport) {
+      scrollViewport.addEventListener('scroll', handleScroll);
+      return () => scrollViewport.removeEventListener('scroll', handleScroll);
+    }
+
+    return undefined;
+  }, [note]);
 
   // Add click handlers for citation links
   useEffect(() => {
@@ -154,6 +181,9 @@ export const NoteEditor: React.FC = () => {
       });
       setNote({ ...note, title: extractedTitle, content: editedContent });
       setEditing(false);
+
+      // Update location state with new title
+      navigate(location.pathname, { replace: true, state: { noteTitle: extractedTitle } });
     } catch (err) {
       console.error('Error saving note:', err);
       setError('Failed to save note');
@@ -201,7 +231,7 @@ export const NoteEditor: React.FC = () => {
         </div>
       )}
 
-      <div className="flex-1 min-h-0 relative px-8">
+      <div ref={scrollRef} className="flex-1 min-h-0 relative px-8">
         <ScrollArea className="h-full">
           <div className="max-w-4xl pb-4 pt-4">
             {editing ? (

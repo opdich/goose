@@ -99,10 +99,10 @@ export const NotesList: React.FC = () => {
         </div>
       </div>
 
-      <div className="flex-1 min-h-0 relative px-8">
+      <div className="flex-1 min-h-0 relative pr-1">
         <ScrollArea className="h-full">
           {notes.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12">
+            <div className="flex flex-col items-center justify-center py-12 px-8">
               <FileText className="w-16 h-16 text-text-muted mb-4" />
               <p className="text-text-muted text-center mb-4">You haven't created any notes yet.</p>
               <Button onClick={handleCreateNote} variant="outline">
@@ -110,7 +110,7 @@ export const NotesList: React.FC = () => {
               </Button>
             </div>
           ) : (
-            <div className="space-y-2 p-1 pb-4">
+            <div className="space-y-2 pt-1 pb-4 px-8">
               {notes.map((note) => (
                 <Card
                   key={note.id}

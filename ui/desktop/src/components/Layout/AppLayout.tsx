@@ -123,7 +123,7 @@ const AppLayoutContent: React.FC = () => {
         <div
           className={`${headerPadding} pt-3 pb-3 flex items-center justify-between relative z-100 transition-all duration-200`}
         >
-          <div className="flex items-center gap-2">
+          <div className="flex items-center">
             <Button
               onClick={() => navigate('/notes')}
               className="no-drag hover:!bg-background-medium"

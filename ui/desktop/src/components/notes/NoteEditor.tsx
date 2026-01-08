@@ -231,9 +231,9 @@ export const NoteEditor: React.FC = () => {
         </div>
       )}
 
-      <div ref={scrollRef} className="flex-1 min-h-0 relative px-8">
+      <div ref={scrollRef} className="flex-1 min-h-0 relative pr-1">
         <ScrollArea className="h-full">
-          <div className="max-w-4xl pb-4 pt-4">
+          <div className="max-w-4xl pb-4 pt-4 px-8">
             {editing ? (
               <textarea
                 value={editedContent}

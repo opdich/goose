@@ -253,6 +253,14 @@ export const NoteEditor: React.FC = () => {
               </div>
             )}
             <style>{`
+              .prose h1,
+              .prose h2,
+              .prose h3,
+              .prose h4,
+              .prose h5,
+              .prose h6 {
+                font-weight: 300;
+              }
               .prose a[href^="#cite-"] {
                 cursor: pointer;
                 color: #3b82f6;

@@ -1,10 +1,11 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Edit, Save, X } from 'lucide-react';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
+import { Save, X } from 'lucide-react';
 import { getNote, updateNote as updateNoteApi } from '../../api/sdk.gen';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import MarkdownContent from '../MarkdownContent';
+import { ScrollArea } from '../ui/scroll-area';
 
 interface Citation {
   session_id: string;
@@ -14,6 +15,7 @@ interface Citation {
 
 export const NoteEditor: React.FC = () => {
   const { id } = useParams<{ id: string }>();
+  const location = useLocation();
   const [note, setNote] = useState<{ id: string; title: string; content: string } | null>(null);
   const [citations, setCitations] = useState<Citation[]>([]);
   const [editing, setEditing] = useState(false);
@@ -68,6 +70,15 @@ export const NoteEditor: React.FC = () => {
 
     loadNote();
   }, [id]);
+
+  // Check if we should enter edit mode (from top bar button)
+  useEffect(() => {
+    if (location.state?.edit && note) {
+      setEditing(true);
+      // Clear the state so it doesn't trigger again
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.state, note, navigate, location.pathname]);
 
   // Add click handlers for citation links
   useEffect(() => {
@@ -174,83 +185,72 @@ export const NoteEditor: React.FC = () => {
   }
 
   return (
-    <div className="container mx-auto p-6 max-w-4xl h-full overflow-y-auto">
-      <div className="flex items-center justify-between mb-6">
-        <Button
-          variant="ghost"
-          onClick={() => navigate('/notes')}
-          className="flex items-center gap-2"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back to Notes
-        </Button>
-        {editing ? (
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={handleCancel} disabled={saving}>
-              <X className="w-4 h-4 mr-2" />
-              Cancel
-            </Button>
-            <Button onClick={handleSave} disabled={saving}>
-              <Save className="w-4 h-4 mr-2" />
-              {saving ? 'Saving...' : 'Save'}
-            </Button>
-          </div>
-        ) : (
-          <Button onClick={() => setEditing(true)}>
-            <Edit className="w-4 h-4 mr-2" />
-            Edit
-          </Button>
-        )}
-      </div>
+    <div className="h-full min-h-0">
+      <ScrollArea className="h-full">
+        <div className="container mx-auto px-6 py-4 max-w-4xl">
+          {editing && (
+            <div className="flex justify-end gap-2 mb-4">
+              <Button variant="outline" onClick={handleCancel} disabled={saving}>
+                <X className="w-4 h-4 mr-2" />
+                Cancel
+              </Button>
+              <Button onClick={handleSave} disabled={saving}>
+                <Save className="w-4 h-4 mr-2" />
+                {saving ? 'Saving...' : 'Save'}
+              </Button>
+            </div>
+          )}
 
-      {editing ? (
-        <div className="space-y-4">
-          <div>
-            <Input
-              value={editedTitle}
-              onChange={(e) => setEditedTitle(e.target.value)}
-              placeholder="Note title"
-              className="text-2xl font-bold"
-            />
-          </div>
-          <div>
-            <textarea
-              value={editedContent}
-              onChange={(e) => setEditedContent(e.target.value)}
-              placeholder="Note content (Markdown supported)"
-              className="w-full min-h-[500px] font-mono border border-borderSubtle rounded-md p-3 bg-background-default text-textStandard"
-            />
-          </div>
+          {editing ? (
+            <div className="space-y-4">
+              <div>
+                <Input
+                  value={editedTitle}
+                  onChange={(e) => setEditedTitle(e.target.value)}
+                  placeholder="Note title"
+                  className="text-2xl font-bold"
+                />
+              </div>
+              <div>
+                <textarea
+                  value={editedContent}
+                  onChange={(e) => setEditedContent(e.target.value)}
+                  placeholder="Note content (Markdown supported)"
+                  className="w-full min-h-[500px] font-mono border border-borderSubtle rounded-md p-3 bg-background-default text-textStandard"
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <h1 className="text-3xl font-bold">{note.title}</h1>
+              <div
+                ref={contentRef}
+                className="prose prose-sm max-w-none"
+                style={{
+                  // Make citation links look clickable
+                  cursor: 'default',
+                }}
+              >
+                <MarkdownContent content={note.content} />
+              </div>
+              <style>{`
+                .prose a[href^="#cite-"] {
+                  cursor: pointer;
+                  color: #3b82f6;
+                  text-decoration: none;
+                  font-weight: 600;
+                  transition: opacity 0.2s;
+                  user-select: none;
+                }
+                .prose a[href^="#cite-"]:hover {
+                  opacity: 0.7;
+                  text-decoration: underline;
+                }
+              `}</style>
+            </div>
+          )}
         </div>
-      ) : (
-        <div className="space-y-4">
-          <h1 className="text-3xl font-bold">{note.title}</h1>
-          <div
-            ref={contentRef}
-            className="prose prose-sm max-w-none"
-            style={{
-              // Make citation links look clickable
-              cursor: 'default',
-            }}
-          >
-            <MarkdownContent content={note.content} />
-          </div>
-          <style>{`
-            .prose a[href^="#cite-"] {
-              cursor: pointer;
-              color: #3b82f6;
-              text-decoration: none;
-              font-weight: 600;
-              transition: opacity 0.2s;
-              user-select: none;
-            }
-            .prose a[href^="#cite-"]:hover {
-              opacity: 0.7;
-              text-decoration: underline;
-            }
-          `}</style>
-        </div>
-      )}
+      </ScrollArea>
     </div>
   );
 };

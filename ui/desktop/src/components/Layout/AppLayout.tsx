@@ -2,7 +2,7 @@ import React from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import AppSidebar from '../GooseSidebar/AppSidebar';
 import { View, ViewOptions } from '../../utils/navigationUtils';
-import { AppWindowMac, AppWindow } from 'lucide-react';
+import { AppWindowMac, AppWindow, Notebook, NotebookPen } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Sidebar, SidebarInset, SidebarProvider, SidebarTrigger, useSidebar } from '../ui/sidebar';
 
@@ -11,6 +11,15 @@ const AppLayoutContent: React.FC = () => {
   const location = useLocation();
   const safeIsMacOS = (window?.electron?.platform || 'darwin') === 'darwin';
   const { isMobile, openMobile } = useSidebar();
+
+  // Detect if we're in a notes window (has mainWindowId set)
+  const isNotesWindow = React.useMemo(() => {
+    try {
+      return window.appConfig?.get('mainWindowId') !== undefined;
+    } catch {
+      return false;
+    }
+  }, []);
 
   // Calculate padding based on sidebar state and macOS
   const headerPadding = safeIsMacOS ? 'pl-21' : 'pl-4';
@@ -72,6 +81,49 @@ const AppLayoutContent: React.FC = () => {
     );
   };
 
+  // Notes window layout - simplified without sidebar
+  if (isNotesWindow) {
+    const isNotesList = location.pathname === '/notes';
+    const isCreateNote = location.pathname === '/notes/create';
+    const isViewingNote = !isNotesList && !isCreateNote;
+
+    const handleEditCurrentNote = () => {
+      // Navigate to the same note with edit flag in state
+      navigate(location.pathname, { state: { edit: true } });
+    };
+
+    return (
+      <div className="flex flex-col flex-1 w-full relative animate-fade-in">
+        <div className={`${headerPadding} pt-3 pb-3 flex items-center relative z-100`}>
+          <Button
+            onClick={() => navigate('/notes')}
+            className="no-drag hover:!bg-background-medium"
+            variant="ghost"
+            size="xs"
+            title="Go to notes"
+          >
+            <Notebook className="w-4 h-4" />
+          </Button>
+          {isViewingNote && (
+            <Button
+              onClick={handleEditCurrentNote}
+              className="no-drag hover:!bg-background-medium"
+              variant="ghost"
+              size="xs"
+              title="Edit note"
+            >
+              <NotebookPen className="w-4 h-4" />
+            </Button>
+          )}
+        </div>
+        <div className="flex-1 overflow-hidden">
+          <Outlet />
+        </div>
+      </div>
+    );
+  }
+
+  // Main window layout with sidebar
   return (
     <div className="flex flex-1 w-full relative animate-fade-in">
       {!shouldHideButtons && (

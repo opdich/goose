@@ -12,6 +12,7 @@ import {
 } from '../ui/dialog';
 import { Input } from '../ui/input';
 import { Checkbox } from '@radix-ui/themes';
+import { ScrollArea } from '../ui/scroll-area';
 
 interface Session {
   id: string;
@@ -101,7 +102,7 @@ export const CreateNoteModal: React.FC = () => {
 
   return (
     <Dialog open={true} onOpenChange={(open) => !open && handleCancel()}>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Create New Note</DialogTitle>
           <DialogDescription>
@@ -110,7 +111,7 @@ export const CreateNoteModal: React.FC = () => {
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="space-y-4 flex-1 min-h-0">
           <div>
             <label htmlFor="title" className="block text-sm font-medium text-textStandard mb-1">
               Title (optional)
@@ -124,39 +125,43 @@ export const CreateNoteModal: React.FC = () => {
             />
           </div>
 
-          <div>
+          <div className="flex-1 min-h-0 flex flex-col">
             <label className="block text-sm font-medium text-textStandard mb-2">
               Select Sessions ({selectedSessions.size} selected)
             </label>
             {error && <p className="text-sm text-destructive mt-2">{error}</p>}
-            <div className="mt-2 space-y-2 max-h-64 overflow-y-auto border rounded-md p-4">
-              {sessions.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  {loading
-                    ? 'Loading sessions...'
-                    : 'No sessions found. Create a conversation first.'}
-                </p>
-              ) : (
-                sessions.map((session) => (
-                  <div key={session.id} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={session.id}
-                      checked={selectedSessions.has(session.id)}
-                      onCheckedChange={() => toggleSession(session.id)}
-                      disabled={loading}
-                    />
-                    <label
-                      htmlFor={session.id}
-                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer flex-1"
-                    >
-                      {session.name}
-                      <span className="text-xs text-muted-foreground ml-2">
-                        {new Date(session.updated_at).toLocaleDateString()}
-                      </span>
-                    </label>
-                  </div>
-                ))
-              )}
+            <div className="flex-1 min-h-0 mt-2">
+              <ScrollArea className="h-64 border rounded-md">
+                <div className="p-4 space-y-2">
+                  {sessions.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      {loading
+                        ? 'Loading sessions...'
+                        : 'No sessions found. Create a conversation first.'}
+                    </p>
+                  ) : (
+                    sessions.map((session) => (
+                      <div key={session.id} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={session.id}
+                          checked={selectedSessions.has(session.id)}
+                          onCheckedChange={() => toggleSession(session.id)}
+                          disabled={loading}
+                        />
+                        <label
+                          htmlFor={session.id}
+                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer flex-1"
+                        >
+                          {session.name}
+                          <span className="text-xs text-muted-foreground ml-2">
+                            {new Date(session.updated_at).toLocaleDateString()}
+                          </span>
+                        </label>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </ScrollArea>
             </div>
           </div>
         </div>

@@ -470,6 +470,22 @@ export function AppInner() {
     };
   }, [navigate]);
 
+  // Handle navigation requests from notes window
+  useEffect(() => {
+    const handleNavigateToConversation = (data: { sessionId: string; messageId?: string }) => {
+      console.log('Navigating to conversation:', data.sessionId, 'message:', data.messageId);
+      navigate(`/pair?resumeSessionId=${data.sessionId}`, {
+        state: { highlightMessageId: data.messageId },
+      });
+    };
+
+    window.electron.onNavigateToConversation(handleNavigateToConversation);
+
+    return () => {
+      window.electron.offNavigateToConversation(handleNavigateToConversation);
+    };
+  }, [navigate]);
+
   useEffect(() => {
     console.log('Setting up keyboard shortcuts');
     const handleKeyDown = (event: KeyboardEvent) => {

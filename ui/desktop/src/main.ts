@@ -1188,6 +1188,139 @@ ipcMain.handle('open-external', async (_event, url: string) => {
   }
 });
 
+// Keep track of notes windows per main window
+const notesWindows = new Map<number, BrowserWindow>();
+
+// Handle opening notes window
+ipcMain.handle('open-notes-window', async (event, initialPath?: string) => {
+  try {
+    const senderWindow = BrowserWindow.fromWebContents(event.sender);
+    if (!senderWindow) {
+      throw new Error('Could not find sender window');
+    }
+
+    // Check if a notes window already exists for this main window
+    const existingNotesWindow = notesWindows.get(senderWindow.id);
+    if (existingNotesWindow && !existingNotesWindow.isDestroyed()) {
+      existingNotesWindow.focus();
+      if (initialPath) {
+        if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
+          existingNotesWindow.loadURL(`${MAIN_WINDOW_VITE_DEV_SERVER_URL}#${initialPath}`);
+        } else {
+          existingNotesWindow.loadFile(path.join(__dirname, '../dist/index.html'), {
+            hash: initialPath,
+          });
+        }
+      }
+      return true;
+    }
+
+    // Get the goosed client for this window
+    const goosedClient = goosedClients.get(senderWindow.id);
+    if (!goosedClient) {
+      throw new Error('No goosed client found for this window');
+    }
+
+    // Get the base URL from the sender window's config
+    const baseUrl = await senderWindow.webContents.executeJavaScript(
+      'window.appConfig.get("GOOSE_API_HOST")'
+    );
+
+    // Create a new window for notes
+    const notesWindow = new BrowserWindow({
+      titleBarStyle: process.platform === 'darwin' ? 'hidden' : 'default',
+      trafficLightPosition: process.platform === 'darwin' ? { x: 20, y: 16 } : undefined,
+      vibrancy: process.platform === 'darwin' ? 'window' : undefined,
+      frame: process.platform !== 'darwin',
+      width: 900,
+      height: 700,
+      minWidth: 600,
+      resizable: true,
+      title: 'Notes',
+      webPreferences: {
+        spellcheck: true,
+        preload: path.join(__dirname, 'preload.js'),
+        webSecurity: true,
+        nodeIntegration: false,
+        contextIsolation: true,
+        additionalArguments: [
+          JSON.stringify({
+            ...appConfig,
+            GOOSE_API_HOST: baseUrl,
+            mainWindowId: senderWindow.id,
+          }),
+        ],
+        partition: 'persist:goose',
+      },
+    });
+
+    // Share the goosed client with the new window
+    goosedClients.set(notesWindow.id, goosedClient);
+
+    // Track this notes window
+    notesWindows.set(senderWindow.id, notesWindow);
+
+    // Clean up when notes window is closed
+    notesWindow.on('closed', () => {
+      notesWindows.delete(senderWindow.id);
+      goosedClients.delete(notesWindow.id);
+    });
+
+    // Load the notes URL
+    const urlPath = initialPath || '/notes';
+    if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
+      notesWindow.loadURL(`${MAIN_WINDOW_VITE_DEV_SERVER_URL}#${urlPath}`);
+    } else {
+      notesWindow.loadFile(path.join(__dirname, '../dist/index.html'), {
+        hash: urlPath,
+      });
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error opening notes window:', error);
+    throw error;
+  }
+});
+
+// Handle opening a conversation in the main window from notes window
+ipcMain.handle(
+  'open-conversation-in-main',
+  async (event, sessionId: string, messageId?: string) => {
+    try {
+      const notesWindow = BrowserWindow.fromWebContents(event.sender);
+      if (!notesWindow) {
+        throw new Error('Could not find notes window');
+      }
+
+      // Get the main window ID from the notes window config
+      const mainWindowId = await notesWindow.webContents.executeJavaScript(
+        'window.appConfig.get("mainWindowId")'
+      );
+
+      // Find the main window
+      const mainWindow = BrowserWindow.fromId(mainWindowId);
+      if (!mainWindow || mainWindow.isDestroyed()) {
+        throw new Error('Main window not found');
+      }
+
+      // Focus the main window
+      if (mainWindow.isMinimized()) {
+        mainWindow.restore();
+      }
+      mainWindow.focus();
+
+      // Send message to main window to navigate to the conversation
+      mainWindow.webContents.send('navigate-to-conversation', { sessionId, messageId });
+
+      return true;
+    } catch (error) {
+      console.error('Error opening conversation in main window:', error);
+      throw error;
+    }
+  }
+);
+
 // Handle directory chooser
 ipcMain.handle('directory-chooser', (_event) => {
   return openDirectoryDialog();

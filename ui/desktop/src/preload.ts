@@ -99,6 +99,12 @@ type ElectronAPI = {
   openNotificationsSettings: () => Promise<boolean>;
   onMouseBackButtonClicked: (callback: () => void) => void;
   offMouseBackButtonClicked: (callback: () => void) => void;
+  onNavigateToConversation: (
+    callback: (data: { sessionId: string; messageId?: string }) => void
+  ) => void;
+  offNavigateToConversation: (
+    callback: (data: { sessionId: string; messageId?: string }) => void
+  ) => void;
   on: (
     channel: string,
     callback: (event: Electron.IpcRendererEvent, ...args: unknown[]) => void
@@ -118,6 +124,10 @@ type ElectronAPI = {
   deleteTempFile: (filePath: string) => void;
   // Function for opening external URLs securely
   openExternal: (url: string) => Promise<void>;
+  // Function to open notes window
+  openNotesWindow: (initialPath?: string) => Promise<boolean>;
+  // Function to open a conversation in the main window (from notes window)
+  openConversationInMain: (sessionId: string, messageId?: string) => Promise<boolean>;
   // Function to serve temp images
   getTempImage: (filePath: string) => Promise<string | null>;
   // Update-related functions
@@ -140,6 +150,12 @@ type AppConfigAPI = {
   get: (key: string) => unknown;
   getAll: () => Record<string, unknown>;
 };
+
+// Store wrapped callbacks for proper cleanup
+const navigationCallbackWrappers = new WeakMap<
+  (data: { sessionId: string; messageId?: string }) => void,
+  (event: Electron.IpcRendererEvent, data: { sessionId: string; messageId?: string }) => void
+>();
 
 const electronAPI: ElectronAPI = {
   platform: process.platform,
@@ -210,6 +226,25 @@ const electronAPI: ElectronAPI = {
   offMouseBackButtonClicked: (callback: () => void) => {
     ipcRenderer.removeListener('mouse-back-button-clicked', callback);
   },
+  onNavigateToConversation: (
+    callback: (data: { sessionId: string; messageId?: string }) => void
+  ) => {
+    const wrappedCallback = (
+      _event: Electron.IpcRendererEvent,
+      data: { sessionId: string; messageId?: string }
+    ) => callback(data);
+    navigationCallbackWrappers.set(callback, wrappedCallback);
+    ipcRenderer.on('navigate-to-conversation', wrappedCallback);
+  },
+  offNavigateToConversation: (
+    callback: (data: { sessionId: string; messageId?: string }) => void
+  ) => {
+    const wrappedCallback = navigationCallbackWrappers.get(callback);
+    if (wrappedCallback) {
+      ipcRenderer.removeListener('navigate-to-conversation', wrappedCallback);
+      navigationCallbackWrappers.delete(callback);
+    }
+  },
   on: (
     channel: string,
     callback: (event: Electron.IpcRendererEvent, ...args: unknown[]) => void
@@ -236,6 +271,12 @@ const electronAPI: ElectronAPI = {
   },
   openExternal: (url: string): Promise<void> => {
     return ipcRenderer.invoke('open-external', url);
+  },
+  openNotesWindow: (initialPath?: string): Promise<boolean> => {
+    return ipcRenderer.invoke('open-notes-window', initialPath);
+  },
+  openConversationInMain: (sessionId: string, messageId?: string): Promise<boolean> => {
+    return ipcRenderer.invoke('open-conversation-in-main', sessionId, messageId);
   },
   getTempImage: (filePath: string): Promise<string | null> => {
     return ipcRenderer.invoke('get-temp-image', filePath);

@@ -31,6 +31,7 @@ interface NavigationItem {
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   tooltip: string;
+  onClick?: () => void;
 }
 
 interface NavigationSeparator {
@@ -68,6 +69,7 @@ const menuItems: NavigationEntry[] = [
     label: 'Notes',
     icon: Notebook,
     tooltip: 'View your notes',
+    onClick: () => window.electron.openNotesWindow(),
   },
   { type: 'separator' },
   {
@@ -151,8 +153,8 @@ const AppSidebar: React.FC<SidebarProps> = ({ currentPath }) => {
             <SidebarMenuItem>
               <SidebarMenuButton
                 data-testid={`sidebar-${entry.label.toLowerCase()}-button`}
-                onClick={() => navigate(entry.path)}
-                isActive={isActivePath(entry.path)}
+                onClick={entry.onClick ? entry.onClick : () => navigate(entry.path)}
+                isActive={entry.onClick ? false : isActivePath(entry.path)}
                 tooltip={entry.tooltip}
                 className="w-full justify-start px-3 rounded-lg h-fit hover:bg-background-medium/50 transition-all duration-200 data-[active=true]:bg-background-medium"
               >

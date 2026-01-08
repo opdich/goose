@@ -207,6 +207,7 @@ export default function ProgressiveMessageList({
         return (
           <div
             key={message.id ?? `msg-${index}-${message.created}`}
+            id={message.id ? `message-${message.id}` : undefined}
             className={`relative ${index === 0 ? 'mt-0' : 'mt-4'} ${isUser ? 'user' : 'assistant'} ${messageIsInChain ? 'in-chain' : ''}`}
             data-testid="message-container"
           >

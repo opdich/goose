@@ -45,15 +45,17 @@ export const NoteEditor: React.FC = () => {
 
           // Load citations
           if (response.data.citations) {
-            setCitations(
-              response.data.citations.map(
-                (c: { session_id: string; message_id: string; citation_index: number }) => ({
-                  session_id: c.session_id,
-                  message_id: c.message_id,
-                  citation_index: c.citation_index,
-                })
-              )
+            const citationsData = response.data.citations.map(
+              (c: { session_id: string; message_id: string; citation_index: number }) => ({
+                session_id: c.session_id,
+                message_id: c.message_id,
+                citation_index: c.citation_index,
+              })
             );
+            console.log('Loaded citations:', citationsData);
+            setCitations(citationsData);
+          } else {
+            console.log('No citations in response');
           }
         }
       } catch (err) {
@@ -74,31 +76,41 @@ export const NoteEditor: React.FC = () => {
     const handleCitationClick = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
 
-      // Check if clicked element is a <sup> tag or inside one
-      let supElement: HTMLElement | null = null;
-      if (target.tagName === 'SUP') {
-        supElement = target;
-      } else if (target.parentElement?.tagName === 'SUP') {
-        supElement = target.parentElement;
+      // Check if clicked element is an <a> tag with a citation href
+      let linkElement: HTMLElement | null = null;
+      if (target.tagName === 'A') {
+        linkElement = target;
+      } else if (target.parentElement?.tagName === 'A') {
+        linkElement = target.parentElement;
       }
 
-      if (supElement) {
-        // Extract citation number from the content like "[1]"
-        const text = supElement.textContent?.trim();
-        if (text) {
-          const match = text.match(/\[(\d+)\]/);
+      if (linkElement) {
+        const href = linkElement.getAttribute('href');
+        console.log('Link clicked, href:', href);
+
+        // Check if this is a citation link (format: #cite-N)
+        if (href?.startsWith('#cite-')) {
+          e.preventDefault();
+
+          // Extract citation number from href like "#cite-1"
+          const match = href.match(/#cite-(\d+)/);
           if (match) {
-            e.preventDefault();
             const citationNum = parseInt(match[1]);
+            console.log('Looking for citation index:', citationNum);
+            console.log('Available citations:', citations);
+
             const citation = citations.find((c) => c.citation_index === citationNum);
             if (citation) {
               console.log('Opening session:', citation.session_id, 'message:', citation.message_id);
-              // Navigate to the session with the message
-              navigate(`/pair?resumeSessionId=${citation.session_id}`, {
-                state: { highlightMessageId: citation.message_id },
-              });
+              // Open the conversation in the main window
+              window.electron
+                .openConversationInMain(citation.session_id, citation.message_id)
+                .catch((err) => {
+                  console.error('Failed to open conversation:', err);
+                  window.alert('Failed to open conversation in main window');
+                });
             } else {
-              console.log('Citation not found:', citationNum, 'available:', citations);
+              console.log('Citation not found for index:', citationNum);
             }
           }
         }
@@ -224,13 +236,15 @@ export const NoteEditor: React.FC = () => {
             <MarkdownContent content={note.content} />
           </div>
           <style>{`
-            .prose sup {
+            .prose a[href^="#cite-"] {
               cursor: pointer;
               color: #3b82f6;
+              text-decoration: none;
+              font-weight: 600;
               transition: opacity 0.2s;
               user-select: none;
             }
-            .prose sup:hover {
+            .prose a[href^="#cite-"]:hover {
               opacity: 0.7;
               text-decoration: underline;
             }

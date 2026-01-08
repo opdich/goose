@@ -68,6 +68,7 @@ function BaseChatContent({
   const scrollRef = useRef<ScrollAreaHandle>(null);
 
   const disableAnimation = location.state?.disableAnimation || false;
+  const highlightMessageId = location.state?.highlightMessageId;
   const [hasStartedUsingRecipe, setHasStartedUsingRecipe] = React.useState(false);
   const [hasNotAcceptedRecipe, setHasNotAcceptedRecipe] = useState<boolean>();
   const [hasRecipeSecurityWarnings, setHasRecipeSecurityWarnings] = useState(false);
@@ -203,6 +204,31 @@ function BaseChatContent({
   }, [messages.length]);
 
   const toolCount = useToolCount(sessionId);
+
+  // Scroll to and highlight a specific message (e.g., from note citations)
+  useEffect(() => {
+    if (highlightMessageId && messages.length > 0) {
+      // Wait for messages to render
+      setTimeout(() => {
+        const element = document.getElementById(`message-${highlightMessageId}`);
+        if (element) {
+          element.scrollIntoView({
+            behavior: 'smooth',
+            block: 'center',
+          });
+          // Add a highlight effect
+          element.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.5)';
+          element.style.borderRadius = '8px';
+          element.style.transition = 'box-shadow 0.3s ease';
+          setTimeout(() => {
+            element.style.boxShadow = '';
+          }, 3000);
+        } else {
+          console.warn('Message not found:', highlightMessageId);
+        }
+      }, 500);
+    }
+  }, [highlightMessageId, messages.length]);
 
   // Listen for global scroll-to-bottom requests (e.g., from MCP UI prompt actions)
   useEffect(() => {

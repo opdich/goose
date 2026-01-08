@@ -27,10 +27,10 @@ Your task is to:
 1. Extract key information, insights, decisions, and important details from the conversation
 2. Organize the content by topic or theme (not chronologically)
 3. Create clear section headings using markdown
-4. For each piece of information, include a citation marker in the format <sup>[N]</sup> where N is an integer starting from 1
+4. For each piece of information, include a citation marker in the format [[N]](#cite-N) where N is an integer starting from 1
 5. Use proper markdown formatting (headings, lists, code blocks, etc.)
 
-The citation markers <sup>[1]</sup>, <sup>[2]</sup>, etc. will be linked back to the original messages. Place them immediately after the relevant sentence or paragraph.
+The citation markers [[1]](#cite-1), [[2]](#cite-2), etc. will be linked back to the original messages. Place them immediately after the relevant sentence or paragraph.
 
 Create a comprehensive, well-structured note that captures the essential information from the conversation."#;
 
@@ -168,7 +168,7 @@ impl NoteGenerator {
     ) -> Vec<NoteCitation> {
         let mut citations = Vec::new();
         
-        let citation_regex = regex::Regex::new(r"<sup>\[(\d+)\]</sup>").unwrap();
+        let citation_regex = regex::Regex::new(r"\[\[(\d+)\]\]\(#cite-\d+\)").unwrap();
         
         for cap in citation_regex.captures_iter(content) {
             if let Some(num_str) = cap.get(1) {

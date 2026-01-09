@@ -311,12 +311,16 @@ export default function ChatInput({
   }, [recipeAccepted, initialPrompt, messages.length]);
 
   // Handle overlay messages
-  // Use ref to avoid re-registering event listener
+  // Use refs to avoid re-registering event listener
   const handleSubmitRef = useRef(handleSubmit);
+  const isLoadingRef = useRef(isLoading);
+  const setQueuedMessagesRef = useRef(setQueuedMessages);
 
   useEffect(() => {
     handleSubmitRef.current = handleSubmit;
-  }, [handleSubmit]);
+    isLoadingRef.current = isLoading;
+    setQueuedMessagesRef.current = setQueuedMessages;
+  }, [handleSubmit, isLoading, setQueuedMessages]);
 
   useEffect(() => {
     let lastHandledMessage = '';
@@ -335,10 +339,30 @@ export default function ChatInput({
       lastHandledMessage = message;
       lastHandledTime = now;
 
-      // Use form submission to ensure proper message handling
-      handleSubmitRef.current(
-        new CustomEvent('submit', { detail: { value: message } }) as unknown as React.FormEvent
-      );
+      // If agent is busy, add to queue instead of submitting immediately
+      if (isLoadingRef.current) {
+        const newMessage = {
+          id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+          content: message,
+          timestamp: Date.now(),
+        };
+        setQueuedMessagesRef.current((prev) => {
+          const newQueue = [...prev, newMessage];
+          // If adding to an empty queue, reset the paused state
+          if (prev.length === 0) {
+            queuePausedRef.current = false;
+            setLastInterruption(null);
+          }
+          return newQueue;
+        });
+        // Add to local message storage for history
+        LocalMessageStorage.addMessage(message);
+      } else {
+        // Agent is idle, submit directly
+        handleSubmitRef.current(
+          new CustomEvent('submit', { detail: { value: message } }) as unknown as React.FormEvent
+        );
+      }
     };
 
     window.addEventListener('overlay-message-received', handleOverlayMessage);

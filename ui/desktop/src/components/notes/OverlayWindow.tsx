@@ -259,7 +259,9 @@ export const OverlayWindow: React.FC = () => {
             onClick={handleCancelNote}
             style={
               {
-                padding: '20px',
+                padding: '12px',
+                margin: '8px',
+                borderRadius: '12px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',

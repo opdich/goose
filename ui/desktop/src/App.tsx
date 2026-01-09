@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { IpcRendererEvent } from 'electron';
 import {
   HashRouter,
@@ -487,17 +487,24 @@ export function AppInner() {
     };
   }, [navigate]);
 
-  // Handle overlay messages
+  // Handle overlay messages - use refs to avoid re-registering
+  const navigateRef = useRef(navigate);
+  const activeSessionIdRef = useRef(activeSessionId);
+
+  useEffect(() => {
+    navigateRef.current = navigate;
+    activeSessionIdRef.current = activeSessionId;
+  }, [navigate, activeSessionId]);
+
   useEffect(() => {
     const handleOverlayMessage = (_event: IpcRendererEvent, ...args: unknown[]) => {
       const message = args[0] as string;
-      console.log('Received overlay message:', message);
 
       // Navigate to pair view and dispatch event with message
-      if (activeSessionId) {
-        navigate(`/pair?resumeSessionId=${activeSessionId}`);
+      if (activeSessionIdRef.current) {
+        navigateRef.current(`/pair?resumeSessionId=${activeSessionIdRef.current}`);
       } else {
-        navigate('/pair');
+        navigateRef.current('/pair');
       }
 
       // Dispatch custom event that ChatInput can listen to
@@ -511,7 +518,7 @@ export function AppInner() {
     return () => {
       window.electron.off('overlay-message', handleOverlayMessage);
     };
-  }, [navigate, activeSessionId]);
+  }, []); // Empty dependency array - only register once
 
   // Expose function to get current session ID for overlay
   useEffect(() => {

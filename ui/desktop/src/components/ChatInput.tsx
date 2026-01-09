@@ -311,21 +311,34 @@ export default function ChatInput({
   }, [recipeAccepted, initialPrompt, messages.length]);
 
   // Handle overlay messages
+  // Use ref to avoid re-registering event listener
+  const handleSubmitRef = useRef(handleSubmit);
+
   useEffect(() => {
+    handleSubmitRef.current = handleSubmit;
+  }, [handleSubmit]);
+
+  useEffect(() => {
+    let lastHandledMessage = '';
+    let lastHandledTime = 0;
+
     const handleOverlayMessage = (event: Event) => {
       const customEvent = event as CustomEvent<{ message: string }>;
       const message = customEvent.detail.message;
+      const now = Date.now();
 
-      // Set the message and auto-submit
-      setDisplayValue(message);
-      setValue(message);
+      // Prevent duplicate handling of the same message within 1 second
+      if (message === lastHandledMessage && now - lastHandledTime < 1000) {
+        return;
+      }
 
-      // Auto-submit after a brief delay
-      setTimeout(() => {
-        handleSubmit(
-          new CustomEvent('submit', { detail: { value: message } }) as unknown as React.FormEvent
-        );
-      }, 100);
+      lastHandledMessage = message;
+      lastHandledTime = now;
+
+      // Use form submission to ensure proper message handling
+      handleSubmitRef.current(
+        new CustomEvent('submit', { detail: { value: message } }) as unknown as React.FormEvent
+      );
     };
 
     window.addEventListener('overlay-message-received', handleOverlayMessage);
@@ -333,7 +346,7 @@ export default function ChatInput({
     return () => {
       window.removeEventListener('overlay-message-received', handleOverlayMessage);
     };
-  }, [handleSubmit]);
+  }, []); // Empty dependency array - only register once
 
   // State to track if the IME is composing (i.e., in the middle of Japanese IME input)
   const [isComposing, setIsComposing] = useState(false);

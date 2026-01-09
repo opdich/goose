@@ -1483,14 +1483,8 @@ ipcMain.handle('send-message-to-main-chat', async (event, message: string, files
       fullMessage = message ? `${message} ${files.join(' ')}` : files.join(' ');
     }
 
-    // Send message to main window to add to chat
+    // Send message to main window to add to chat (silently, without focusing)
     mainWindow.webContents.send('overlay-message', fullMessage);
-
-    // Focus the main window
-    if (mainWindow.isMinimized()) {
-      mainWindow.restore();
-    }
-    mainWindow.focus();
 
     return true;
   } catch (error) {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Image, FolderOpen } from 'lucide-react';
 import { ChatSmart, Attach, Send, Microphone } from '../icons';
 import { DictateDialog } from './DictateDialog';
@@ -87,41 +87,45 @@ export const OverlayWindow: React.FC = () => {
   };
 
   // Handle note submission
-  const handleSubmitNote = async () => {
+  const handleSubmitNote = useCallback(async () => {
     if (!noteInputValue.trim() || isSendingNote) return;
 
     setIsSendingNote(true);
     try {
       await window.electron.sendMessageToMainChat(noteInputValue.trim());
       setNoteInputValue('');
-      setShowAddNote(false);
-      // Resize back to original size
-      window.electron.resizeOverlayWindow(60, 196);
+      // Keep the input open, just clear the text and refocus
+      setTimeout(() => {
+        inputRef.current?.focus();
+      }, 50);
     } catch (error) {
       console.error('Failed to send note:', error);
     } finally {
       setIsSendingNote(false);
     }
-  };
+  }, [noteInputValue, isSendingNote]);
 
   // Handle canceling note input
-  const handleCancelNote = () => {
+  const handleCancelNote = useCallback(() => {
     setNoteInputValue('');
     setShowAddNote(false);
     // Resize back to original size
     window.electron.resizeOverlayWindow(60, 196);
-  };
+  }, []);
 
   // Handle key press in input
-  const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      handleSubmitNote();
-    } else if (e.key === 'Escape') {
-      e.preventDefault();
-      handleCancelNote();
-    }
-  };
+  const handleInputKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        handleSubmitNote();
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        handleCancelNote();
+      }
+    },
+    [handleSubmitNote, handleCancelNote]
+  );
 
   // Focus input when showAddNote becomes true
   useEffect(() => {
@@ -147,7 +151,7 @@ export const OverlayWindow: React.FC = () => {
     return () => {
       document.removeEventListener('keydown', handleGlobalKeyDown);
     };
-  }, [showAddNote]);
+  }, [showAddNote, handleCancelNote]);
 
   const buttons: OverlayButton[] = [
     {

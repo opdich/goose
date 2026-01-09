@@ -36,6 +36,7 @@ import {
   saveSettings,
   updateEnvironmentVariables,
 } from './utils/settings';
+import { loadOverlayPositions, saveOverlayPositions } from './utils/overlayPositions';
 import * as crypto from 'crypto';
 // import electron from "electron";
 import * as yaml from 'yaml';
@@ -1196,6 +1197,9 @@ const notesWindows = new Map<number, BrowserWindow>();
 // Keep track of overlay windows per notes window
 const overlayWindows = new Map<number, BrowserWindow>();
 
+// Keep track of last overlay positions (loaded from disk)
+const overlayLastPositions = loadOverlayPositions();
+
 // Handle opening notes window
 ipcMain.handle('open-notes-window', async (event, initialPath?: string) => {
   try {
@@ -1343,25 +1347,35 @@ ipcMain.handle('open-overlay-window', async (event) => {
     }
 
     // Get the main window ID from the sender window's config
-    const mainWindowId = await senderWindow.webContents.executeJavaScript(
+    // If undefined, the sender IS the main window
+    let mainWindowId = await senderWindow.webContents.executeJavaScript(
       'window.appConfig.get("mainWindowId")'
     );
+
+    // If mainWindowId is undefined, sender is the main window
+    if (!mainWindowId) {
+      mainWindowId = senderWindow.id;
+    }
 
     // Get the base URL from the sender window's config
     const baseUrl = await senderWindow.webContents.executeJavaScript(
       'window.appConfig.get("GOOSE_API_HOST")'
     );
 
-    // Get the goosed client for the notes window
-    const goosedClient = goosedClients.get(senderWindow.id);
+    // Get the goosed client - try sender first, then mainWindow
+    let goosedClient = goosedClients.get(senderWindow.id);
+    if (!goosedClient && mainWindowId !== senderWindow.id) {
+      goosedClient = goosedClients.get(mainWindowId);
+    }
     if (!goosedClient) {
-      throw new Error('No goosed client found for notes window');
+      throw new Error('No goosed client found for window');
     }
 
     // Create a new frameless, always-on-top window for the overlay
-    // Start at a reasonable position
-    const initialX = 50;
-    const initialY = 100;
+    // Restore last position or use default
+    const lastPosition = overlayLastPositions.get(senderWindow.id);
+    const initialX = lastPosition?.x ?? 0;
+    const initialY = lastPosition?.y ?? 0;
 
     const overlayWindow = new BrowserWindow({
       width: 60,
@@ -1389,7 +1403,7 @@ ipcMain.handle('open-overlay-window', async (event) => {
             ...appConfig,
             GOOSE_API_HOST: baseUrl,
             mainWindowId: mainWindowId,
-            notesWindowId: senderWindow.id,
+            notesWindowId: mainWindowId !== senderWindow.id ? senderWindow.id : undefined,
           }),
         ],
         partition: 'persist:goose',
@@ -1401,6 +1415,20 @@ ipcMain.handle('open-overlay-window', async (event) => {
 
     // Track this overlay window
     overlayWindows.set(senderWindow.id, overlayWindow);
+
+    // Save position when moved
+    overlayWindow.on('moved', () => {
+      const [x, y] = overlayWindow.getPosition();
+      overlayLastPositions.set(senderWindow.id, { x, y });
+      saveOverlayPositions(overlayLastPositions);
+    });
+
+    // Save position before window closes
+    overlayWindow.on('close', () => {
+      const [x, y] = overlayWindow.getPosition();
+      overlayLastPositions.set(senderWindow.id, { x, y });
+      saveOverlayPositions(overlayLastPositions);
+    });
 
     // Clean up when overlay window is closed
     overlayWindow.on('closed', () => {
@@ -1470,6 +1498,10 @@ ipcMain.handle('send-message-to-main-chat', async (event, message: string, files
     const mainWindowId = await senderWindow.webContents.executeJavaScript(
       'window.appConfig.get("mainWindowId")'
     );
+
+    if (!mainWindowId) {
+      throw new Error('Main window ID not found in overlay config');
+    }
 
     // Find the main window
     const mainWindow = BrowserWindow.fromId(mainWindowId);
@@ -2818,6 +2850,9 @@ async function getAllowList(): Promise<string[]> {
 }
 
 app.on('will-quit', async () => {
+  // Save overlay positions before quitting
+  saveOverlayPositions(overlayLastPositions);
+
   for (const [windowId, blockerId] of windowPowerSaveBlockers.entries()) {
     try {
       powerSaveBlocker.stop(blockerId);

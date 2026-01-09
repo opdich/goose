@@ -232,52 +232,16 @@ export const OverlayWindow: React.FC = () => {
     <div
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
-      style={
-        {
-          width: '100vw',
-          height: '100vh',
-          backgroundColor: 'transparent',
-          display: 'flex',
-          alignItems: 'flex-start',
-          justifyContent: 'flex-start',
-          padding: 0,
-          margin: 0,
-          WebkitAppRegion: 'drag',
-        } as React.CSSProperties
-      }
+      className="w-screen h-screen bg-transparent flex items-start justify-start p-0 m-0"
+      style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
     >
       {showAddNote ? (
         // Note input mode
-        <div
-          style={{
-            width: '100%',
-            display: 'flex',
-            alignItems: 'center',
-          }}
-        >
+        <div className="w-full flex items-center">
           <button
             onClick={handleCancelNote}
-            style={
-              {
-                padding: '12px',
-                margin: '8px',
-                borderRadius: '12px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#333',
-                background: 'transparent',
-                border: 'none',
-                cursor: 'pointer',
-                WebkitAppRegion: 'no-drag',
-              } as React.CSSProperties
-            }
-            onMouseEnter={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'rgba(0, 0, 0, 0.05)';
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent';
-            }}
+            className="p-3 m-2 rounded-xl flex items-center justify-center text-gray-700 bg-transparent border-none cursor-pointer hover:bg-black/5"
+            style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
           >
             <ChatSmart className="w-5 h-5" />
           </button>
@@ -332,51 +296,22 @@ export const OverlayWindow: React.FC = () => {
       ) : (
         // Button mode
         <div
-          style={
-            {
-              minWidth: '60px',
-              padding: '8px',
-            } as React.CSSProperties
-          }
+          className="min-w-[60px] p-2"
           onMouseEnter={handleOverlayHover}
           onMouseLeave={handleOverlayLeave}
         >
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <div className="flex flex-col">
             {buttons.map((button) => (
               <button
                 key={button.id}
-                className="overlay-button"
-                style={
-                  {
-                    backgroundColor: 'transparent',
-                    border: 'none',
-                    padding: '12px',
-                    borderRadius: '12px',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    transition: 'all 0.2s',
-                    WebkitAppRegion: 'no-drag',
-                  } as React.CSSProperties
-                }
-                onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLButtonElement).style.backgroundColor =
-                    'rgba(0, 0, 0, 0.05)';
-                }}
-                onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent';
-                }}
                 onClick={button.onClick}
+                className="bg-transparent border-none p-3 rounded-xl cursor-pointer flex items-center transition-all duration-200 hover:bg-black/5"
+                style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
               >
-                <div style={{ color: '#333', flexShrink: 0, lineHeight: 0 }}>{button.icon}</div>
+                <div className="text-gray-700 flex-shrink-0 leading-none">{button.icon}</div>
                 <div
+                  className="text-sm font-normal text-gray-700 whitespace-nowrap overflow-hidden transition-all duration-300"
                   style={{
-                    fontSize: '14px',
-                    fontWeight: 400,
-                    color: '#333',
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    transition: 'all 0.3s',
                     maxWidth: isExpanded ? '200px' : '0',
                     opacity: isExpanded ? 1 : 0,
                     marginLeft: isExpanded ? '12px' : '0',

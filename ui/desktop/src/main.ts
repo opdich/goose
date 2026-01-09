@@ -3,6 +3,7 @@ import {
   app,
   App,
   BrowserWindow,
+  desktopCapturer,
   dialog,
   globalShortcut,
   ipcMain,
@@ -49,6 +50,7 @@ import {
 import { UPDATES_ENABLED } from './updates';
 import './utils/recipeHash';
 import { Client, createClient, createConfig } from './api/client';
+import { listSessions } from './api/sdk.gen';
 import installExtension, { REACT_DEVELOPER_TOOLS } from 'electron-devtools-installer';
 
 // Updater functions (moved here to keep updates.ts minimal for release replacement)
@@ -1191,6 +1193,9 @@ ipcMain.handle('open-external', async (_event, url: string) => {
 // Keep track of notes windows per main window
 const notesWindows = new Map<number, BrowserWindow>();
 
+// Keep track of overlay windows per notes window
+const overlayWindows = new Map<number, BrowserWindow>();
+
 // Handle opening notes window
 ipcMain.handle('open-notes-window', async (event, initialPath?: string) => {
   try {
@@ -1320,6 +1325,288 @@ ipcMain.handle(
     }
   }
 );
+
+// Handle opening overlay window
+ipcMain.handle('open-overlay-window', async (event) => {
+  try {
+    const senderWindow = BrowserWindow.fromWebContents(event.sender);
+    if (!senderWindow) {
+      throw new Error('Could not find sender window');
+    }
+
+    // Check if an overlay window already exists for this notes window
+    const existingOverlay = overlayWindows.get(senderWindow.id);
+    if (existingOverlay && !existingOverlay.isDestroyed()) {
+      // If overlay exists, close it (toggle off)
+      existingOverlay.close();
+      return true;
+    }
+
+    // Get the main window ID from the sender window's config
+    const mainWindowId = await senderWindow.webContents.executeJavaScript(
+      'window.appConfig.get("mainWindowId")'
+    );
+
+    // Get the base URL from the sender window's config
+    const baseUrl = await senderWindow.webContents.executeJavaScript(
+      'window.appConfig.get("GOOSE_API_HOST")'
+    );
+
+    // Get the goosed client for the notes window
+    const goosedClient = goosedClients.get(senderWindow.id);
+    if (!goosedClient) {
+      throw new Error('No goosed client found for notes window');
+    }
+
+    // Create a new frameless, always-on-top window for the overlay
+    // Start at a reasonable position
+    const initialX = 50;
+    const initialY = 100;
+
+    const overlayWindow = new BrowserWindow({
+      width: 60,
+      height: 196,
+      x: initialX,
+      y: initialY,
+      frame: false,
+      transparent: true,
+      alwaysOnTop: true,
+      resizable: false,
+      movable: true,
+      minimizable: false,
+      maximizable: false,
+      skipTaskbar: true,
+      hasShadow: true,
+      backgroundColor: '#00000000',
+      webPreferences: {
+        preload: path.join(__dirname, 'preload.js'),
+        webSecurity: true,
+        nodeIntegration: false,
+        contextIsolation: true,
+        devTools: !app.isPackaged,
+        additionalArguments: [
+          JSON.stringify({
+            ...appConfig,
+            GOOSE_API_HOST: baseUrl,
+            mainWindowId: mainWindowId,
+            notesWindowId: senderWindow.id,
+          }),
+        ],
+        partition: 'persist:goose',
+      },
+    });
+
+    // Share the goosed client with the overlay window
+    goosedClients.set(overlayWindow.id, goosedClient);
+
+    // Track this overlay window
+    overlayWindows.set(senderWindow.id, overlayWindow);
+
+    // Clean up when overlay window is closed
+    overlayWindow.on('closed', () => {
+      overlayWindows.delete(senderWindow.id);
+      goosedClients.delete(overlayWindow.id);
+    });
+
+    // Load the overlay URL
+    if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
+      overlayWindow.loadURL(`${MAIN_WINDOW_VITE_DEV_SERVER_URL}#/overlay`);
+    } else {
+      overlayWindow.loadFile(path.join(__dirname, '../dist/index.html'), {
+        hash: '/overlay',
+      });
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error opening overlay window:', error);
+    throw error;
+  }
+});
+
+// Handle closing overlay window
+ipcMain.handle('close-overlay-window', async (event) => {
+  try {
+    const overlayWindow = BrowserWindow.fromWebContents(event.sender);
+    if (overlayWindow) {
+      overlayWindow.close();
+    }
+    return true;
+  } catch (error) {
+    console.error('Error closing overlay window:', error);
+    throw error;
+  }
+});
+
+// Handle resizing overlay window
+ipcMain.handle('resize-overlay-window', async (event, width: number, height: number) => {
+  try {
+    const overlayWindow = BrowserWindow.fromWebContents(event.sender);
+    if (overlayWindow && !overlayWindow.isDestroyed()) {
+      const currentBounds = overlayWindow.getBounds();
+      overlayWindow.setBounds({
+        x: currentBounds.x,
+        y: currentBounds.y,
+        width,
+        height,
+      });
+    }
+    return true;
+  } catch (error) {
+    console.error('Error resizing overlay window:', error);
+    throw error;
+  }
+});
+
+// Handle sending message to main chat
+ipcMain.handle('send-message-to-main-chat', async (event, message: string, files?: string[]) => {
+  try {
+    const senderWindow = BrowserWindow.fromWebContents(event.sender);
+    if (!senderWindow) {
+      throw new Error('Could not find sender window');
+    }
+
+    // Get the main window ID from the sender's config
+    const mainWindowId = await senderWindow.webContents.executeJavaScript(
+      'window.appConfig.get("mainWindowId")'
+    );
+
+    // Find the main window
+    const mainWindow = BrowserWindow.fromId(mainWindowId);
+    if (!mainWindow || mainWindow.isDestroyed()) {
+      throw new Error('Main window not found');
+    }
+
+    // Combine message and files if present
+    let fullMessage = message;
+    if (files && files.length > 0) {
+      fullMessage = message ? `${message} ${files.join(' ')}` : files.join(' ');
+    }
+
+    // Send message to main window to add to chat
+    mainWindow.webContents.send('overlay-message', fullMessage);
+
+    // Focus the main window
+    if (mainWindow.isMinimized()) {
+      mainWindow.restore();
+    }
+    mainWindow.focus();
+
+    return true;
+  } catch (error) {
+    console.error('Error sending message to main chat:', error);
+    throw error;
+  }
+});
+
+// Handle getting main window session
+ipcMain.handle('get-main-window-session', async (event) => {
+  try {
+    const senderWindow = BrowserWindow.fromWebContents(event.sender);
+    if (!senderWindow) {
+      throw new Error('Could not find sender window');
+    }
+
+    // Get the main window ID from the sender's config
+    const mainWindowId = await senderWindow.webContents.executeJavaScript(
+      'window.appConfig.get("mainWindowId")'
+    );
+
+    // Find the main window
+    const mainWindow = BrowserWindow.fromId(mainWindowId);
+    if (!mainWindow || mainWindow.isDestroyed()) {
+      return null;
+    }
+
+    // Get the current session ID from the main window
+    const sessionId = await mainWindow.webContents.executeJavaScript(
+      'window.__getCurrentSessionId?.()'
+    );
+
+    return sessionId || null;
+  } catch (error) {
+    console.error('Error getting main window session:', error);
+    return null;
+  }
+});
+
+// Handle listing recent sessions
+ipcMain.handle('list-recent-sessions', async (event) => {
+  try {
+    const windowId = BrowserWindow.fromWebContents(event.sender)?.id;
+    if (!windowId) {
+      return [];
+    }
+
+    const client = goosedClients.get(windowId);
+    if (!client) {
+      return [];
+    }
+
+    // Get sessions from the API
+    const response = await listSessions({ client });
+    return response.data?.sessions || [];
+  } catch (error) {
+    console.error('Error listing recent sessions:', error);
+    return [];
+  }
+});
+
+// Handle switching main window session
+ipcMain.handle('switch-main-window-session', async (event, sessionId: string) => {
+  try {
+    const senderWindow = BrowserWindow.fromWebContents(event.sender);
+    if (!senderWindow) {
+      throw new Error('Could not find sender window');
+    }
+
+    // Get the main window ID from the sender's config
+    const mainWindowId = await senderWindow.webContents.executeJavaScript(
+      'window.appConfig.get("mainWindowId")'
+    );
+
+    // Find the main window
+    const mainWindow = BrowserWindow.fromId(mainWindowId);
+    if (!mainWindow || mainWindow.isDestroyed()) {
+      throw new Error('Main window not found');
+    }
+
+    // Send message to main window to switch session
+    mainWindow.webContents.send('navigate-to-conversation', { sessionId });
+
+    // Focus the main window
+    if (mainWindow.isMinimized()) {
+      mainWindow.restore();
+    }
+    mainWindow.focus();
+
+    return true;
+  } catch (error) {
+    console.error('Error switching main window session:', error);
+    throw error;
+  }
+});
+
+// Handle screenshot capture
+ipcMain.handle('capture-screenshot', async () => {
+  try {
+    const sources = await desktopCapturer.getSources({
+      types: ['screen'],
+      thumbnailSize: screen.getPrimaryDisplay().size,
+    });
+
+    if (sources.length === 0) {
+      throw new Error('No screen sources available');
+    }
+
+    // Return the thumbnail as a data URL
+    const source = sources[0];
+    return source.thumbnail.toDataURL();
+  } catch (error) {
+    console.error('Error capturing screenshot:', error);
+    throw error;
+  }
+});
 
 // Handle directory chooser
 ipcMain.handle('directory-chooser', (_event) => {

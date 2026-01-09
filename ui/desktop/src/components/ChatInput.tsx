@@ -310,6 +310,31 @@ export default function ChatInput({
     }
   }, [recipeAccepted, initialPrompt, messages.length]);
 
+  // Handle overlay messages
+  useEffect(() => {
+    const handleOverlayMessage = (event: Event) => {
+      const customEvent = event as CustomEvent<{ message: string }>;
+      const message = customEvent.detail.message;
+
+      // Set the message and auto-submit
+      setDisplayValue(message);
+      setValue(message);
+
+      // Auto-submit after a brief delay
+      setTimeout(() => {
+        handleSubmit(
+          new CustomEvent('submit', { detail: { value: message } }) as unknown as React.FormEvent
+        );
+      }, 100);
+    };
+
+    window.addEventListener('overlay-message-received', handleOverlayMessage);
+
+    return () => {
+      window.removeEventListener('overlay-message-received', handleOverlayMessage);
+    };
+  }, [handleSubmit]);
+
   // State to track if the IME is composing (i.e., in the middle of Japanese IME input)
   const [isComposing, setIsComposing] = useState(false);
   const [historyIndex, setHistoryIndex] = useState(-1);

@@ -130,6 +130,15 @@ type ElectronAPI = {
   openConversationInMain: (sessionId: string, messageId?: string) => Promise<boolean>;
   // Function to serve temp images
   getTempImage: (filePath: string) => Promise<string | null>;
+  // Overlay window functions
+  openOverlayWindow: () => Promise<boolean>;
+  closeOverlayWindow: () => Promise<boolean>;
+  resizeOverlayWindow: (width: number, height: number) => Promise<boolean>;
+  sendMessageToMainChat: (message: string, files?: string[]) => Promise<boolean>;
+  getMainWindowSession: () => Promise<string | null>;
+  listRecentSessions: () => Promise<unknown[]>;
+  switchMainWindowSession: (sessionId: string) => Promise<boolean>;
+  captureScreenshot: () => Promise<string>;
   // Update-related functions
   getVersion: () => string;
   checkForUpdates: () => Promise<{ updateInfo: unknown; error: string | null }>;
@@ -280,6 +289,30 @@ const electronAPI: ElectronAPI = {
   },
   getTempImage: (filePath: string): Promise<string | null> => {
     return ipcRenderer.invoke('get-temp-image', filePath);
+  },
+  openOverlayWindow: (): Promise<boolean> => {
+    return ipcRenderer.invoke('open-overlay-window');
+  },
+  closeOverlayWindow: (): Promise<boolean> => {
+    return ipcRenderer.invoke('close-overlay-window');
+  },
+  resizeOverlayWindow: (width: number, height: number): Promise<boolean> => {
+    return ipcRenderer.invoke('resize-overlay-window', width, height);
+  },
+  sendMessageToMainChat: (message: string, files?: string[]): Promise<boolean> => {
+    return ipcRenderer.invoke('send-message-to-main-chat', message, files);
+  },
+  getMainWindowSession: (): Promise<string | null> => {
+    return ipcRenderer.invoke('get-main-window-session');
+  },
+  listRecentSessions: (): Promise<unknown[]> => {
+    return ipcRenderer.invoke('list-recent-sessions');
+  },
+  switchMainWindowSession: (sessionId: string): Promise<boolean> => {
+    return ipcRenderer.invoke('switch-main-window-session', sessionId);
+  },
+  captureScreenshot: (): Promise<string> => {
+    return ipcRenderer.invoke('capture-screenshot');
   },
   getVersion: (): string => {
     return config.GOOSE_VERSION || ipcRenderer.sendSync('get-app-version') || '';

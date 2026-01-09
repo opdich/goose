@@ -2,7 +2,7 @@ import React from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import AppSidebar from '../GooseSidebar/AppSidebar';
 import { View, ViewOptions } from '../../utils/navigationUtils';
-import { AppWindowMac, AppWindow, Notebook, NotebookPen } from 'lucide-react';
+import { AppWindowMac, AppWindow, Notebook, NotebookPen, Layers } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Sidebar, SidebarInset, SidebarProvider, SidebarTrigger, useSidebar } from '../ui/sidebar';
 
@@ -118,6 +118,14 @@ const AppLayoutContent: React.FC = () => {
       navigate(location.pathname, { state: { edit: true, noteTitle } });
     };
 
+    const handleOpenOverlay = async () => {
+      try {
+        await window.electron.openOverlayWindow();
+      } catch (error) {
+        console.error('Failed to open overlay:', error);
+      }
+    };
+
     return (
       <div className="flex flex-col flex-1 w-full h-full relative animate-fade-in bg-background-default">
         <div
@@ -144,6 +152,15 @@ const AppLayoutContent: React.FC = () => {
                 <NotebookPen className="w-4 h-4" />
               </Button>
             )}
+            <Button
+              onClick={handleOpenOverlay}
+              className="no-drag hover:!bg-background-medium"
+              variant="ghost"
+              size="xs"
+              title="Open overlay"
+            >
+              <Layers className="w-4 h-4" />
+            </Button>
           </div>
           {isViewingNote && showNoteTitle && noteTitle && (
             <h2 className="text-sm text-text-standard truncate max-w-md mr-4 transition-opacity duration-200">

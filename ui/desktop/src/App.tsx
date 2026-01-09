@@ -41,6 +41,7 @@ import RecipesView from './components/recipes/RecipesView';
 import { NotesList } from './components/notes/NotesList';
 import { NoteEditor } from './components/notes/NoteEditor';
 import { CreateNoteModal } from './components/notes/CreateNoteModal';
+import { OverlayWindow } from './components/notes/OverlayWindow';
 import { View, ViewOptions } from './utils/navigationUtils';
 import { NoProviderOrModelError, useAgent } from './hooks/useAgent';
 import { useNavigation } from './hooks/useNavigation';
@@ -486,6 +487,43 @@ export function AppInner() {
     };
   }, [navigate]);
 
+  // Handle overlay messages
+  useEffect(() => {
+    const handleOverlayMessage = (_event: IpcRendererEvent, ...args: unknown[]) => {
+      const message = args[0] as string;
+      console.log('Received overlay message:', message);
+
+      // Navigate to pair view and dispatch event with message
+      if (activeSessionId) {
+        navigate(`/pair?resumeSessionId=${activeSessionId}`);
+      } else {
+        navigate('/pair');
+      }
+
+      // Dispatch custom event that ChatInput can listen to
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('overlay-message-received', { detail: { message } }));
+      }, 100);
+    };
+
+    window.electron.on('overlay-message', handleOverlayMessage);
+
+    return () => {
+      window.electron.off('overlay-message', handleOverlayMessage);
+    };
+  }, [navigate, activeSessionId]);
+
+  // Expose function to get current session ID for overlay
+  useEffect(() => {
+    (
+      window as typeof window & { __getCurrentSessionId?: () => string | null }
+    ).__getCurrentSessionId = () => activeSessionId;
+    return () => {
+      delete (window as typeof window & { __getCurrentSessionId?: () => string | null })
+        .__getCurrentSessionId;
+    };
+  }, [activeSessionId]);
+
   useEffect(() => {
     console.log('Setting up keyboard shortcuts');
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -638,6 +676,7 @@ export function AppInner() {
         <div className="titlebar-drag-region" />
         <Routes>
           <Route path="launcher" element={<LauncherView />} />
+          <Route path="overlay" element={<OverlayWindow />} />
           <Route
             path="welcome"
             element={<WelcomeRoute onSelectProvider={() => setDidSelectProvider(true)} />}

@@ -1391,6 +1391,7 @@ ipcMain.handle('open-overlay-window', async (event) => {
       maximizable: false,
       skipTaskbar: true,
       hasShadow: true,
+      opacity: 0.3,
       backgroundColor: '#00000000',
       webPreferences: {
         preload: path.join(__dirname, 'preload.js'),
@@ -1482,6 +1483,20 @@ ipcMain.handle('resize-overlay-window', async (event, width: number, height: num
     return true;
   } catch (error) {
     console.error('Error resizing overlay window:', error);
+    throw error;
+  }
+});
+
+// Handle setting overlay window opacity
+ipcMain.handle('set-overlay-opacity', async (event, opacity: number) => {
+  try {
+    const overlayWindow = BrowserWindow.fromWebContents(event.sender);
+    if (overlayWindow && !overlayWindow.isDestroyed()) {
+      overlayWindow.setOpacity(opacity);
+    }
+    return true;
+  } catch (error) {
+    console.error('Error setting overlay opacity:', error);
     throw error;
   }
 });

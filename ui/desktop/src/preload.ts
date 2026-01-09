@@ -134,6 +134,7 @@ type ElectronAPI = {
   openOverlayWindow: () => Promise<boolean>;
   closeOverlayWindow: () => Promise<boolean>;
   resizeOverlayWindow: (width: number, height: number) => Promise<boolean>;
+  setOverlayOpacity: (opacity: number) => Promise<boolean>;
   sendMessageToMainChat: (message: string, files?: string[]) => Promise<boolean>;
   getMainWindowSession: () => Promise<string | null>;
   listRecentSessions: () => Promise<unknown[]>;
@@ -298,6 +299,9 @@ const electronAPI: ElectronAPI = {
   },
   resizeOverlayWindow: (width: number, height: number): Promise<boolean> => {
     return ipcRenderer.invoke('resize-overlay-window', width, height);
+  },
+  setOverlayOpacity: (opacity: number): Promise<boolean> => {
+    return ipcRenderer.invoke('set-overlay-opacity', opacity);
   },
   sendMessageToMainChat: (message: string, files?: string[]): Promise<boolean> => {
     return ipcRenderer.invoke('send-message-to-main-chat', message, files);

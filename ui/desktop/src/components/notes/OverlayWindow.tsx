@@ -23,6 +23,7 @@ export const OverlayWindow: React.FC = () => {
   const [isSendingNote, setIsSendingNote] = useState(false);
   const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const isHoveringRef = useRef(false);
 
   // Log for debugging
   useEffect(() => {
@@ -36,6 +37,32 @@ export const OverlayWindow: React.FC = () => {
       dragRegion.style.display = 'none';
     }
   }, []);
+
+  // Manage opacity based on interaction state
+  useEffect(() => {
+    // If any dialog or input is active, set full opacity
+    if (showAddNote || showDictate || showScreenshot || showSessionSwitcher) {
+      window.electron.setOverlayOpacity(1.0);
+    } else {
+      // When all dialogs close, return to low opacity only if not hovering
+      if (!isHoveringRef.current) {
+        window.electron.setOverlayOpacity(0.3);
+      }
+    }
+  }, [showAddNote, showDictate, showScreenshot, showSessionSwitcher]);
+
+  const handleMouseEnter = () => {
+    isHoveringRef.current = true;
+    window.electron.setOverlayOpacity(1.0);
+  };
+
+  const handleMouseLeave = () => {
+    isHoveringRef.current = false;
+    // Only reduce opacity if no dialogs are open
+    if (!showAddNote && !showDictate && !showScreenshot && !showSessionSwitcher) {
+      window.electron.setOverlayOpacity(0.3);
+    }
+  };
 
   const handleOverlayHover = () => {
     // Don't expand if any dialog/input mode is open
@@ -203,6 +230,8 @@ export const OverlayWindow: React.FC = () => {
 
   return (
     <div
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
       style={
         {
           width: '100vw',

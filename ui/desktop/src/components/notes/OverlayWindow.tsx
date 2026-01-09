@@ -255,17 +255,30 @@ export const OverlayWindow: React.FC = () => {
             alignItems: 'center',
           }}
         >
-          <div
-            style={{
-              padding: '20px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#333',
+          <button
+            onClick={handleCancelNote}
+            style={
+              {
+                padding: '20px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#333',
+                background: 'transparent',
+                border: 'none',
+                cursor: 'pointer',
+                WebkitAppRegion: 'no-drag',
+              } as React.CSSProperties
+            }
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'rgba(0, 0, 0, 0.05)';
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent';
             }}
           >
             <ChatSmart className="w-5 h-5" />
-          </div>
+          </button>
           <div
             className="flex flex-1 gap-2 h-screen bg-background-default rounded-2xl"
             style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}

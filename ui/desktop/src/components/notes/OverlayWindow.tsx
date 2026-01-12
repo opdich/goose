@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Image, FolderOpen } from 'lucide-react';
 import { ChatSmart, Attach, Send, Microphone } from '../icons';
-import { DictateDialog } from './DictateDialog';
 import { SessionSwitcher } from './SessionSwitcher';
 import { ScreenshotCapture } from './ScreenshotCapture';
 import { Button } from '../ui/button';
+import { useWhisper } from '../../hooks/useWhisper';
+import { toastError } from '../../toasts';
 
 interface OverlayButton {
   id: string;
@@ -21,9 +22,38 @@ export const OverlayWindow: React.FC = () => {
   const [showScreenshot, setShowScreenshot] = useState(false);
   const [noteInputValue, setNoteInputValue] = useState('');
   const [isSendingNote, setIsSendingNote] = useState(false);
+  const [transcribedText, setTranscribedText] = useState('');
   const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const isHoveringRef = useRef(false);
+  const transcriptionSentRef = useRef(false);
+  const canceledRef = useRef(false);
+
+  const { isRecording, isTranscribing, canUseDictation, startRecording, stopRecording } =
+    useWhisper({
+      onTranscription: (text) => {
+        console.log('onTranscription called, text:', text, 'canceledRef:', canceledRef.current);
+        // Don't set transcription if we've canceled
+        if (!canceledRef.current) {
+          console.log('Setting transcribed text:', text);
+          setTranscribedText(text);
+        } else {
+          console.log('Ignoring transcription because canceled');
+        }
+      },
+      onError: (error) => {
+        toastError({
+          title: 'Dictation Error',
+          msg: error.message,
+        });
+      },
+      onSizeWarning: (sizeMB) => {
+        toastError({
+          title: 'Recording Size Warning',
+          msg: `Recording is ${sizeMB.toFixed(1)}MB. Maximum size is 25MB.`,
+        });
+      },
+    });
 
   // Log for debugging
   useEffect(() => {
@@ -113,6 +143,115 @@ export const OverlayWindow: React.FC = () => {
     window.electron.resizeOverlayWindow(500, 60);
   };
 
+  // Handle Dictate button click
+  const handleDictateClick = async () => {
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+      hoverTimeoutRef.current = null;
+    }
+    setIsExpanded(false);
+    canceledRef.current = false; // Reset cancel flag
+    setShowDictate(true);
+    // Resize for dictation UI - wider if not configured to show message
+    window.electron.resizeOverlayWindow(canUseDictation ? 120 : 500, 60);
+
+    // If dictation is configured, immediately start recording
+    if (canUseDictation) {
+      try {
+        // Small delay to let the UI update before starting
+        setTimeout(async () => {
+          await startRecording();
+        }, 100);
+      } catch (error) {
+        console.error('Failed to auto-start recording:', error);
+      }
+    }
+  };
+
+  // Handle dictation recording
+  const handleStartRecording = useCallback(async () => {
+    try {
+      await startRecording();
+    } catch (error) {
+      console.error('Failed to start recording:', error);
+    }
+  }, [startRecording]);
+
+  const handleStopRecording = useCallback(async () => {
+    try {
+      await stopRecording();
+    } catch (error) {
+      console.error('Failed to stop recording:', error);
+    }
+  }, [stopRecording]);
+
+  // Automatically send transcription when it's ready
+  useEffect(() => {
+    console.log('Send effect triggered:', {
+      transcribedText: transcribedText.trim(),
+      showDictate,
+      transcriptionSentRef: transcriptionSentRef.current,
+      isTranscribing,
+      canceledRef: canceledRef.current,
+    });
+
+    if (
+      transcribedText.trim() &&
+      showDictate &&
+      !transcriptionSentRef.current &&
+      !isTranscribing &&
+      !canceledRef.current
+    ) {
+      console.log('All conditions met, sending transcription');
+      transcriptionSentRef.current = true;
+
+      const sendTranscription = async () => {
+        try {
+          setIsSendingNote(true);
+          console.log('Sending transcription to main chat:', transcribedText.trim());
+          await window.electron.sendMessageToMainChat(transcribedText.trim());
+
+          // Clear transcription but keep dictate mode open for next recording
+          setTimeout(() => {
+            setTranscribedText('');
+            transcriptionSentRef.current = false;
+            // Don't close showDictate - stay in dictate mode
+            // Don't resize - keep the same size
+          }, 100);
+        } catch (error) {
+          console.error('Failed to send transcription:', error);
+          transcriptionSentRef.current = false;
+        } finally {
+          setIsSendingNote(false);
+        }
+      };
+
+      sendTranscription();
+    }
+  }, [transcribedText, showDictate, isTranscribing]);
+
+  // Handle clicking microphone button - stops recording and sends (doesn't cancel)
+  const handleCancelDictate = useCallback(async () => {
+    // If recording, stop it (but don't cancel - let transcription complete and send)
+    if (isRecording) {
+      console.log('Microphone button clicked while recording - stopping to complete');
+      try {
+        await stopRecording();
+      } catch (error) {
+        console.error('Failed to stop recording:', error);
+      }
+      // Don't close the dialog yet - wait for transcription to complete and send
+      return;
+    }
+
+    // If not recording, just close the dialog
+    setTranscribedText('');
+    setShowDictate(false);
+    transcriptionSentRef.current = false;
+    canceledRef.current = false; // Reset for next session
+    window.electron.resizeOverlayWindow(60, 196);
+  }, [isRecording, stopRecording]);
+
   // Handle note submission
   const handleSubmitNote = useCallback(async () => {
     if (!noteInputValue.trim() || isSendingNote) return;
@@ -180,6 +319,60 @@ export const OverlayWindow: React.FC = () => {
     };
   }, [showAddNote, handleCancelNote]);
 
+  // Global keyboard handlers for dictation
+  useEffect(() => {
+    if (!showDictate) return;
+
+    const handleGlobalKeyDown = async (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+
+        // Escape always cancels (prevents transcription from sending)
+        console.log('Escape pressed - canceling dictation');
+        canceledRef.current = true;
+
+        // If recording, stop it
+        if (isRecording) {
+          try {
+            await stopRecording();
+          } catch (error) {
+            console.error('Failed to stop recording:', error);
+          }
+        }
+
+        setTranscribedText('');
+        setShowDictate(false);
+        transcriptionSentRef.current = false;
+        // Don't reset canceledRef here - it needs to stay true to prevent transcription
+        window.electron.resizeOverlayWindow(60, 196);
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+
+        // Enter toggles recording
+        if (isRecording) {
+          console.log('Enter pressed - stopping recording');
+          try {
+            await stopRecording();
+          } catch (error) {
+            console.error('Failed to stop recording:', error);
+          }
+        } else if (!isTranscribing) {
+          console.log('Enter pressed - starting recording');
+          try {
+            await startRecording();
+          } catch (error) {
+            console.error('Failed to start recording:', error);
+          }
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleGlobalKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleGlobalKeyDown);
+    };
+  }, [showDictate, isRecording, isTranscribing, stopRecording, startRecording]);
+
   const buttons: OverlayButton[] = [
     {
       id: 'add-note',
@@ -191,14 +384,7 @@ export const OverlayWindow: React.FC = () => {
       id: 'dictate',
       icon: <Microphone className="w-5 h-5" />,
       label: 'Dictate',
-      onClick: () => {
-        if (hoverTimeoutRef.current) {
-          clearTimeout(hoverTimeoutRef.current);
-          hoverTimeoutRef.current = null;
-        }
-        setIsExpanded(false);
-        setShowDictate(true);
-      },
+      onClick: handleDictateClick,
     },
     {
       id: 'screenshot',
@@ -293,6 +479,50 @@ export const OverlayWindow: React.FC = () => {
             </div>
           </div>
         </div>
+      ) : showDictate ? (
+        // Dictate mode
+        <div className="w-full flex items-center">
+          <button
+            onClick={handleCancelDictate}
+            className="p-3 m-2 rounded-xl flex items-center justify-center text-gray-700 bg-transparent border-none cursor-pointer hover:bg-black/5"
+            style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+          >
+            <Microphone className="w-5 h-5" />
+          </button>
+
+          {!canUseDictation ? (
+            <div
+              className="flex flex-1 items-center h-screen bg-background-default rounded-2xl px-4 py-3"
+              style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+            >
+              <div className="flex-1">
+                <h3 className="text-sm text-textStandard">
+                  Voice Dictation is not configured. Set up in Chat Settings.
+                </h3>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-center gap-4 w-full">
+              {!isRecording ? (
+                <button
+                  onClick={handleStartRecording}
+                  className="w-11 h-11 rounded-full bg-white hover:border-red-700 border-3 border-red-600 border-solid transition-colors flex items-center justify-center border-none cursor-pointer"
+                  style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+                >
+                  <div className="w-4 h-4 rounded-full bg-red-600" />
+                </button>
+              ) : (
+                <button
+                  onClick={handleStopRecording}
+                  className="w-11 h-11 rounded-full bg-white hover:border-gray-700 border-3 border-gray-900 transition-colors flex items-center justify-center cursor-pointer"
+                  style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+                >
+                  <div className="w-4 h-4 bg-gray-900 rounded-sm" />
+                </button>
+              )}
+            </div>
+          )}
+        </div>
       ) : (
         // Button mode
         <div
@@ -325,7 +555,6 @@ export const OverlayWindow: React.FC = () => {
         </div>
       )}
 
-      {showDictate && <DictateDialog onClose={() => setShowDictate(false)} />}
       {showSessionSwitcher && <SessionSwitcher onClose={() => setShowSessionSwitcher(false)} />}
       {showScreenshot && (
         <ScreenshotCapture

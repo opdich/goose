@@ -140,6 +140,7 @@ type ElectronAPI = {
   listRecentSessions: () => Promise<unknown[]>;
   switchMainWindowSession: (sessionId: string) => Promise<boolean>;
   captureScreenshot: () => Promise<string>;
+  captureScreenshotNative: () => Promise<string | null>;
   // Update-related functions
   getVersion: () => string;
   checkForUpdates: () => Promise<{ updateInfo: unknown; error: string | null }>;
@@ -317,6 +318,9 @@ const electronAPI: ElectronAPI = {
   },
   captureScreenshot: (): Promise<string> => {
     return ipcRenderer.invoke('capture-screenshot');
+  },
+  captureScreenshotNative: (): Promise<string | null> => {
+    return ipcRenderer.invoke('capture-screenshot-native');
   },
   getVersion: (): string => {
     return config.GOOSE_VERSION || ipcRenderer.sendSync('get-app-version') || '';

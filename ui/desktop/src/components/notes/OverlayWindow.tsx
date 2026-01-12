@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { SessionSwitcher } from './SessionSwitcher';
-import { ScreenshotCapture } from './ScreenshotCapture';
 import { NoteInput } from './NoteInput';
 import { DictateMode } from './DictateMode';
 import { OverlayButtons } from './OverlayButtons';
@@ -10,9 +9,8 @@ export const OverlayWindow: React.FC = () => {
   const [showAddNote, setShowAddNote] = useState(false);
   const [showDictate, setShowDictate] = useState(false);
   const [showSessionSwitcher, setShowSessionSwitcher] = useState(false);
-  const [showScreenshot, setShowScreenshot] = useState(false);
 
-  const isDialogOpen = showAddNote || showDictate || showScreenshot || showSessionSwitcher;
+  const isDialogOpen = showAddNote || showDictate || showSessionSwitcher;
   const { handleMouseEnter, handleMouseLeave } = useOverlayOpacity({ isDialogOpen });
 
   useEffect(() => {
@@ -45,8 +43,18 @@ export const OverlayWindow: React.FC = () => {
     setShowDictate(true);
   };
 
-  const handleScreenshotClick = () => {
-    setShowScreenshot(true);
+  const handleScreenshotClick = async () => {
+    try {
+      // Trigger native macOS screenshot selector
+      const dataUrl = await window.electron.captureScreenshotNative();
+
+      // If user cancelled, dataUrl will be null
+      if (dataUrl) {
+        await handleScreenshotCapture(dataUrl);
+      }
+    } catch (error) {
+      console.error('Failed to capture screenshot:', error);
+    }
   };
 
   const handleChangeProjectClick = () => {
@@ -84,12 +92,6 @@ export const OverlayWindow: React.FC = () => {
       )}
 
       {showSessionSwitcher && <SessionSwitcher onClose={() => setShowSessionSwitcher(false)} />}
-      {showScreenshot && (
-        <ScreenshotCapture
-          onClose={() => setShowScreenshot(false)}
-          onCapture={handleScreenshotCapture}
-        />
-      )}
     </div>
   );
 };

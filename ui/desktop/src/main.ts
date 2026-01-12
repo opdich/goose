@@ -1628,7 +1628,42 @@ ipcMain.handle('switch-main-window-session', async (event, sessionId: string) =>
   }
 });
 
-// Handle screenshot capture
+// Handle screenshot capture using native macOS screenshot tool
+ipcMain.handle('capture-screenshot-native', async () => {
+  try {
+    const { exec } = await import('child_process');
+    const { promisify } = await import('util');
+    const execAsync = promisify(exec);
+
+    // Create a temporary file path
+    const tempPath = path.join(app.getPath('temp'), `goose-screenshot-${Date.now()}.png`);
+
+    // Use macOS screencapture with interactive mode (-i) to save to file
+    // -i: interactive mode (allows selection)
+    // -s: silent mode (no sound)
+    await execAsync(`screencapture -i -s "${tempPath}"`);
+
+    // Check if file was created (user might have cancelled)
+    if (!fsSync.existsSync(tempPath)) {
+      return null; // User cancelled
+    }
+
+    // Read the file and convert to data URL
+    const imageBuffer = fsSync.readFileSync(tempPath);
+    const dataUrl = `data:image/png;base64,${imageBuffer.toString('base64')}`;
+
+    // Clean up temp file
+    fsSync.unlinkSync(tempPath);
+
+    return dataUrl;
+  } catch (error) {
+    console.error('Error capturing screenshot:', error);
+    // Return null if user cancelled or error occurred
+    return null;
+  }
+});
+
+// Keep the old handler for backwards compatibility
 ipcMain.handle('capture-screenshot', async () => {
   try {
     const sources = await desktopCapturer.getSources({

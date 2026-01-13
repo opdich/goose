@@ -1615,12 +1615,6 @@ ipcMain.handle('switch-main-window-session', async (event, sessionId: string) =>
     // Send message to main window to switch session
     mainWindow.webContents.send('navigate-to-conversation', { sessionId });
 
-    // Focus the main window
-    if (mainWindow.isMinimized()) {
-      mainWindow.restore();
-    }
-    mainWindow.focus();
-
     return true;
   } catch (error) {
     console.error('Error switching main window session:', error);
@@ -1669,12 +1663,6 @@ ipcMain.handle('create-new-session', async (event) => {
 
     // Send message to main window to navigate to the new session
     mainWindow.webContents.send('navigate-to-conversation', { sessionId: newSessionId });
-
-    // Focus the main window
-    if (mainWindow.isMinimized()) {
-      mainWindow.restore();
-    }
-    mainWindow.focus();
 
     return true;
   } catch (error) {

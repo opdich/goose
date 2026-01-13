@@ -100,10 +100,10 @@ type ElectronAPI = {
   onMouseBackButtonClicked: (callback: () => void) => void;
   offMouseBackButtonClicked: (callback: () => void) => void;
   onNavigateToConversation: (
-    callback: (data: { sessionId: string; messageId?: string }) => void
+    callback: (data: { sessionId: string | null; messageId?: string }) => void
   ) => void;
   offNavigateToConversation: (
-    callback: (data: { sessionId: string; messageId?: string }) => void
+    callback: (data: { sessionId: string | null; messageId?: string }) => void
   ) => void;
   on: (
     channel: string,
@@ -139,6 +139,7 @@ type ElectronAPI = {
   getMainWindowSession: () => Promise<string | null>;
   listRecentSessions: () => Promise<unknown[]>;
   switchMainWindowSession: (sessionId: string) => Promise<boolean>;
+  createNewSession: () => Promise<boolean>;
   captureScreenshot: () => Promise<string>;
   captureScreenshotNative: () => Promise<string | null>;
   // Update-related functions
@@ -238,17 +239,17 @@ const electronAPI: ElectronAPI = {
     ipcRenderer.removeListener('mouse-back-button-clicked', callback);
   },
   onNavigateToConversation: (
-    callback: (data: { sessionId: string; messageId?: string }) => void
+    callback: (data: { sessionId: string | null; messageId?: string }) => void
   ) => {
     const wrappedCallback = (
       _event: Electron.IpcRendererEvent,
-      data: { sessionId: string; messageId?: string }
+      data: { sessionId: string | null; messageId?: string }
     ) => callback(data);
     navigationCallbackWrappers.set(callback, wrappedCallback);
     ipcRenderer.on('navigate-to-conversation', wrappedCallback);
   },
   offNavigateToConversation: (
-    callback: (data: { sessionId: string; messageId?: string }) => void
+    callback: (data: { sessionId: string | null; messageId?: string }) => void
   ) => {
     const wrappedCallback = navigationCallbackWrappers.get(callback);
     if (wrappedCallback) {
@@ -315,6 +316,9 @@ const electronAPI: ElectronAPI = {
   },
   switchMainWindowSession: (sessionId: string): Promise<boolean> => {
     return ipcRenderer.invoke('switch-main-window-session', sessionId);
+  },
+  createNewSession: (): Promise<boolean> => {
+    return ipcRenderer.invoke('create-new-session');
   },
   captureScreenshot: (): Promise<string> => {
     return ipcRenderer.invoke('capture-screenshot');

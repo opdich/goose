@@ -13,14 +13,14 @@ interface OverlayButtonsProps {
   onAddNote: () => void;
   onDictate: () => void;
   onScreenshot: () => void;
-  onChangeProject: () => void;
+  onChangeSession: () => void;
 }
 
 export const OverlayButtons: React.FC<OverlayButtonsProps> = ({
   onAddNote,
   onDictate,
   onScreenshot,
-  onChangeProject,
+  onChangeSession,
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -31,7 +31,7 @@ export const OverlayButtons: React.FC<OverlayButtonsProps> = ({
     }
     hoverTimeoutRef.current = setTimeout(() => {
       setIsExpanded(true);
-      window.electron.resizeOverlayWindow(166, 196);
+      window.electron.resizeOverlayWindow(170, 196);
     }, 1000);
   };
 
@@ -71,10 +71,10 @@ export const OverlayButtons: React.FC<OverlayButtonsProps> = ({
       onClick: onScreenshot,
     },
     {
-      id: 'change-project',
+      id: 'change-session',
       icon: <FolderOpen className="w-5 h-5" />,
-      label: 'Change project',
-      onClick: onChangeProject,
+      label: 'Change session',
+      onClick: onChangeSession,
     },
   ];
 

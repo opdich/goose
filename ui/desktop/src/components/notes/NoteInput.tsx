@@ -106,7 +106,7 @@ export const NoteInput: React.FC<NoteInputProps> = ({ onClose }) => {
             className={`flex items-center justify-center text-text-default/70 hover:text-text-default text-xs transition-colors rounded-full !px-2 ${
               !noteInputValue.trim() || isSendingNote
                 ? 'cursor-not-allowed opacity-50 border border-transparent'
-                : 'bg-slate-600 text-white hover:bg-slate-700 border border-slate-600 hover:cursor-pointer'
+                : 'bg-slate-600 text-white hover:bg-slate-700 hover:text-white border border-slate-600 hover:cursor-pointer'
             }`}
           >
             <Send className="w-4 h-4" />

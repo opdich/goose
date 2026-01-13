@@ -473,11 +473,17 @@ export function AppInner() {
 
   // Handle navigation requests from notes window
   useEffect(() => {
-    const handleNavigateToConversation = (data: { sessionId: string; messageId?: string }) => {
+    const handleNavigateToConversation = (data: {
+      sessionId: string | null;
+      messageId?: string;
+    }) => {
       console.log('Navigating to conversation:', data.sessionId, 'message:', data.messageId);
-      navigate(`/pair?resumeSessionId=${data.sessionId}`, {
-        state: { highlightMessageId: data.messageId },
-      });
+      if (data.sessionId) {
+        // Navigate to specific session
+        navigate(`/pair?resumeSessionId=${data.sessionId}`, {
+          state: { highlightMessageId: data.messageId },
+        });
+      }
     };
 
     window.electron.onNavigateToConversation(handleNavigateToConversation);

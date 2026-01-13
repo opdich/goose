@@ -51,7 +51,7 @@ import {
 import { UPDATES_ENABLED } from './updates';
 import './utils/recipeHash';
 import { Client, createClient, createConfig } from './api/client';
-import { listSessions } from './api/sdk.gen';
+import { listSessions, startAgent } from './api/sdk.gen';
 import installExtension, { REACT_DEVELOPER_TOOLS } from 'electron-devtools-installer';
 
 // Updater functions (moved here to keep updates.ts minimal for release replacement)
@@ -1624,6 +1624,61 @@ ipcMain.handle('switch-main-window-session', async (event, sessionId: string) =>
     return true;
   } catch (error) {
     console.error('Error switching main window session:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('create-new-session', async (event) => {
+  try {
+    const senderWindow = BrowserWindow.fromWebContents(event.sender);
+    if (!senderWindow) {
+      throw new Error('Could not find sender window');
+    }
+
+    // Get the main window ID and working dir from the sender's config
+    const [mainWindowId, workingDir] = await Promise.all([
+      senderWindow.webContents.executeJavaScript('window.appConfig.get("mainWindowId")'),
+      senderWindow.webContents.executeJavaScript('window.appConfig.get("GOOSE_WORKING_DIR")'),
+    ]);
+
+    // Find the main window
+    const mainWindow = BrowserWindow.fromId(mainWindowId);
+    if (!mainWindow || mainWindow.isDestroyed()) {
+      throw new Error('Main window not found');
+    }
+
+    // Get the goosed client for the main window
+    const client = goosedClients.get(mainWindow.id);
+    if (!client) {
+      throw new Error('No goosed client found for main window');
+    }
+
+    // Create a new session via the API using the /agent/start endpoint
+    const response = await startAgent({
+      client,
+      body: {
+        working_dir: workingDir as string,
+      },
+    });
+
+    if (!response.data) {
+      throw new Error('Failed to create new session');
+    }
+
+    const newSessionId = response.data.id;
+
+    // Send message to main window to navigate to the new session
+    mainWindow.webContents.send('navigate-to-conversation', { sessionId: newSessionId });
+
+    // Focus the main window
+    if (mainWindow.isMinimized()) {
+      mainWindow.restore();
+    }
+    mainWindow.focus();
+
+    return true;
+  } catch (error) {
+    console.error('Error creating new session:', error);
     throw error;
   }
 });

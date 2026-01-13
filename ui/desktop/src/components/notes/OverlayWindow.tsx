@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { SessionSwitcher } from './SessionSwitcher';
+import { SessionSwitcherInline } from './SessionSwitcherInline';
 import { NoteInput } from './NoteInput';
 import { DictateMode } from './DictateMode';
 import { OverlayButtons } from './OverlayButtons';
@@ -59,6 +59,7 @@ export const OverlayWindow: React.FC = () => {
 
   const handleChangeProjectClick = () => {
     setShowSessionSwitcher(true);
+    window.electron.resizeOverlayWindow(500, 196);
   };
 
   const handleCloseNote = () => {
@@ -68,6 +69,11 @@ export const OverlayWindow: React.FC = () => {
 
   const handleCloseDictate = () => {
     setShowDictate(false);
+    window.electron.resizeOverlayWindow(60, 196);
+  };
+
+  const handleCloseSessionSwitcher = () => {
+    setShowSessionSwitcher(false);
     window.electron.resizeOverlayWindow(60, 196);
   };
 
@@ -82,16 +88,16 @@ export const OverlayWindow: React.FC = () => {
         <NoteInput onClose={handleCloseNote} />
       ) : showDictate ? (
         <DictateMode onClose={handleCloseDictate} autoStart={true} />
+      ) : showSessionSwitcher ? (
+        <SessionSwitcherInline onClose={handleCloseSessionSwitcher} />
       ) : (
         <OverlayButtons
           onAddNote={handleAddNoteClick}
           onDictate={handleDictateClick}
           onScreenshot={handleScreenshotClick}
-          onChangeProject={handleChangeProjectClick}
+          onChangeSession={handleChangeProjectClick}
         />
       )}
-
-      {showSessionSwitcher && <SessionSwitcher onClose={() => setShowSessionSwitcher(false)} />}
     </div>
   );
 };

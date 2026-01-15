@@ -1379,7 +1379,7 @@ ipcMain.handle('open-overlay-window', async (event) => {
 
     const overlayWindow = new BrowserWindow({
       width: 60,
-      height: 196,
+      height: 60,
       x: initialX,
       y: initialY,
       frame: false,

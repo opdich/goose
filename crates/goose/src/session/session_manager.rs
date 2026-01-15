@@ -1417,7 +1417,7 @@ impl SessionStorage {
 
     pub async fn create_note(&self, title: String, content: String) -> Result<String> {
         let note_id = format!("note_{}", chrono::Utc::now().timestamp_millis());
-        
+
         sqlx::query(
             r#"
             INSERT INTO notes (id, title, content)
@@ -1496,12 +1496,12 @@ impl SessionStorage {
         citation_index: i32,
     ) -> Result<()> {
         let citation_id = format!(
-            "cite_{}_{}_{}", 
-            note_id, 
-            citation_index, 
+            "cite_{}_{}_{}",
+            note_id,
+            citation_index,
             chrono::Utc::now().timestamp_nanos_opt().unwrap_or(0)
         );
-        
+
         sqlx::query(
             r#"
             INSERT INTO note_citations (id, note_id, session_id, message_id, citation_index)
@@ -1519,7 +1519,10 @@ impl SessionStorage {
         Ok(())
     }
 
-    pub async fn get_note_citations(&self, note_id: &str) -> Result<Vec<(String, String, String, i32)>> {
+    pub async fn get_note_citations(
+        &self,
+        note_id: &str,
+    ) -> Result<Vec<(String, String, String, i32)>> {
         let rows = sqlx::query_as::<_, (String, String, String, i32)>(
             r#"
             SELECT id, session_id, message_id, citation_index

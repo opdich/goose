@@ -23,7 +23,11 @@ pub struct ErrorResponse {
 
 impl axum::response::IntoResponse for ErrorResponse {
     fn into_response(self) -> axum::response::Response {
-        (self.status, Json(serde_json::json!({ "message": self.message }))).into_response()
+        (
+            self.status,
+            Json(serde_json::json!({ "message": self.message })),
+        )
+            .into_response()
     }
 }
 
@@ -94,27 +98,36 @@ async fn create_note(
     }
 
     let first_session_id = request.session_ids[0].clone();
-    
+
     tracing::info!("Creating note from sessions: {:?}", request.session_ids);
-    
+
     // Load the session to get provider configuration
-    let session = SessionManager::get_session(&first_session_id, false).await.map_err(|e| {
-        tracing::error!("Failed to load session {}: {:?}", first_session_id, e);
-        ErrorResponse {
-            message: format!("Failed to load session: {}", e),
-            status: StatusCode::NOT_FOUND,
-        }
-    })?;
-    
+    let session = SessionManager::get_session(&first_session_id, false)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to load session {}: {:?}", first_session_id, e);
+            ErrorResponse {
+                message: format!("Failed to load session: {}", e),
+                status: StatusCode::NOT_FOUND,
+            }
+        })?;
+
     // Get or create agent for the session
-    let agent = state.get_agent_for_route(first_session_id.clone()).await.map_err(|e| {
-        tracing::error!("Failed to get agent for session {}: {:?}", first_session_id, e);
-        ErrorResponse {
-            message: format!("Agent not initialized for session {}", first_session_id),
-            status: StatusCode::INTERNAL_SERVER_ERROR,
-        }
-    })?;
-    
+    let agent = state
+        .get_agent_for_route(first_session_id.clone())
+        .await
+        .map_err(|e| {
+            tracing::error!(
+                "Failed to get agent for session {}: {:?}",
+                first_session_id,
+                e
+            );
+            ErrorResponse {
+                message: format!("Agent not initialized for session {}", first_session_id),
+                status: StatusCode::INTERNAL_SERVER_ERROR,
+            }
+        })?;
+
     // Get provider configuration
     let config = Config::global();
     let provider_name = session
@@ -150,16 +163,18 @@ async fn create_note(
     };
 
     // Create provider
-    tracing::info!("Creating provider: {} with model: {}", provider_name, model_config.model_name);
-    let provider = create(&provider_name, model_config)
-        .await
-        .map_err(|e| {
-            tracing::error!("Failed to create provider: {:?}", e);
-            ErrorResponse {
-                message: format!("Failed to create provider: {}", e),
-                status: StatusCode::INTERNAL_SERVER_ERROR,
-            }
-        })?;
+    tracing::info!(
+        "Creating provider: {} with model: {}",
+        provider_name,
+        model_config.model_name
+    );
+    let provider = create(&provider_name, model_config).await.map_err(|e| {
+        tracing::error!("Failed to create provider: {:?}", e);
+        ErrorResponse {
+            message: format!("Failed to create provider: {}", e),
+            status: StatusCode::INTERNAL_SERVER_ERROR,
+        }
+    })?;
 
     // Update agent with provider
     agent
@@ -230,12 +245,13 @@ async fn list_notes() -> Result<Json<ListNotesResponse>, ErrorResponse> {
     tag = "Notes"
 )]
 async fn get_note(Path(id): Path<String>) -> Result<Json<GetNoteResponse>, ErrorResponse> {
-    let (note_id, title, content) = SessionManager::get_note(&id)
-        .await
-        .map_err(|e| ErrorResponse {
-            message: format!("Failed to get note: {}", e),
-            status: StatusCode::NOT_FOUND,
-        })?;
+    let (note_id, title, content) =
+        SessionManager::get_note(&id)
+            .await
+            .map_err(|e| ErrorResponse {
+                message: format!("Failed to get note: {}", e),
+                status: StatusCode::NOT_FOUND,
+            })?;
 
     let citations = SessionManager::get_note_citations(&id)
         .await
@@ -246,11 +262,13 @@ async fn get_note(Path(id): Path<String>) -> Result<Json<GetNoteResponse>, Error
 
     let citations = citations
         .into_iter()
-        .map(|(_, session_id, message_id, citation_index)| NoteCitationResponse {
-            session_id,
-            message_id,
-            citation_index,
-        })
+        .map(
+            |(_, session_id, message_id, citation_index)| NoteCitationResponse {
+                session_id,
+                message_id,
+                citation_index,
+            },
+        )
         .collect();
 
     Ok(Json(GetNoteResponse {
@@ -323,4 +341,3 @@ pub fn routes(state: Arc<AppState>) -> Router {
         .route("/notes/{id}", axum::routing::delete(delete_note))
         .with_state(state)
 }
-

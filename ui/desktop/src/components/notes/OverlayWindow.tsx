@@ -64,17 +64,17 @@ export const OverlayWindow: React.FC = () => {
 
   const handleCloseNote = () => {
     setShowAddNote(false);
-    window.electron.resizeOverlayWindow(60, 196);
+    window.electron.resizeOverlayWindow(60, 60);
   };
 
   const handleCloseDictate = () => {
     setShowDictate(false);
-    window.electron.resizeOverlayWindow(60, 196);
+    window.electron.resizeOverlayWindow(60, 60);
   };
 
   const handleCloseSessionSwitcher = () => {
     setShowSessionSwitcher(false);
-    window.electron.resizeOverlayWindow(60, 196);
+    window.electron.resizeOverlayWindow(60, 60);
   };
 
   return (

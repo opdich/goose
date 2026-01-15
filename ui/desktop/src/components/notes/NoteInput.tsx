@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { Image } from 'lucide-react';
 import { ChatSmart, Attach, Send } from '../icons';
 import { Button } from '../ui/button';
 
@@ -27,6 +28,27 @@ export const NoteInput: React.FC<NoteInputProps> = ({ onClose }) => {
       setIsSendingNote(false);
     }
   }, [noteInputValue, isSendingNote]);
+
+  const handleScreenshotClick = useCallback(async () => {
+    try {
+      const dataUrl = await window.electron.captureScreenshotNative();
+      if (dataUrl) {
+        const uniqueId = `screenshot-${Date.now()}`;
+        const result = await window.electron.saveDataUrlToTemp(dataUrl, uniqueId);
+        if (result.filePath) {
+          await window.electron.sendMessageToMainChat(noteInputValue.trim() || '', [
+            result.filePath,
+          ]);
+          setNoteInputValue('');
+          setTimeout(() => {
+            inputRef.current?.focus();
+          }, 50);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to capture screenshot:', error);
+    }
+  }, [noteInputValue]);
 
   const handleInputKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -96,6 +118,16 @@ export const NoteInput: React.FC<NoteInputProps> = ({ onClose }) => {
             className={`flex items-center justify-center text-text-default/70 hover:text-text-default text-xs transition-colors rounded-full !px-2 cursor-pointer`}
           >
             <Attach className="w-4 h-4" />
+          </Button>
+          <Button
+            type="button"
+            onClick={handleScreenshotClick}
+            disabled={false}
+            variant="ghost"
+            size="sm"
+            className={`flex items-center justify-center text-text-default/70 hover:text-text-default text-xs transition-colors rounded-full !px-2 cursor-pointer`}
+          >
+            <Image className="w-4 h-4" />
           </Button>
           <Button
             type="button"

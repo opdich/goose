@@ -41,6 +41,12 @@ export const OverlayWindow: React.FC = () => {
 
   const handleScreenshotClick = async () => {
     try {
+      // Collapse the overlay to just show the icon
+      window.electron.resizeOverlayWindow(60, 60);
+
+      // Small delay to let the resize complete
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
       // Trigger native macOS screenshot selector
       const dataUrl = await window.electron.captureScreenshotNative();
 

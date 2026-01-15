@@ -32,6 +32,13 @@ export const OverlayButtons: React.FC<OverlayButtonsProps> = ({
   const [isExpanded, setIsExpanded] = useState(false);
   const [focusedIndex, setFocusedIndex] = useState(0);
   const [hasNavigated, setHasNavigated] = useState(false);
+  const [lastUsedButtonId, setLastUsedButtonId] = useState<string>(() => {
+    try {
+      return localStorage.getItem('overlay-last-used-button') || 'add-note';
+    } catch {
+      return 'add-note';
+    }
+  });
   const [currentSessionName, setCurrentSessionName] = useState<string>('');
   const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const leaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -118,7 +125,7 @@ export const OverlayButtons: React.FC<OverlayButtonsProps> = ({
         console.log('Focusing container');
         containerRef.current?.focus();
       }, 100);
-    }, 250);
+    }, 500);
   };
 
   const handleOverlayLeave = () => {
@@ -136,11 +143,29 @@ export const OverlayButtons: React.FC<OverlayButtonsProps> = ({
     }, 500);
   };
 
-  const handleButtonClick = useCallback((onClick: () => void) => {
+  const handleButtonClick = useCallback((onClick: () => void, buttonId: string) => {
     if (hoverTimeoutRef.current) {
       clearTimeout(hoverTimeoutRef.current);
       hoverTimeoutRef.current = null;
     }
+
+    // Track last used button (except change-session)
+    if (buttonId !== 'change-session') {
+      setLastUsedButtonId(buttonId);
+      try {
+        localStorage.setItem('overlay-last-used-button', buttonId);
+      } catch {
+        // Ignore localStorage errors
+      }
+    }
+
+    // Collapse when screenshot is clicked
+    if (buttonId === 'screenshot') {
+      setIsExpanded(false);
+      setFocusedIndex(0);
+      setHasNavigated(false);
+    }
+
     onClick();
   }, []);
 
@@ -177,7 +202,7 @@ export const OverlayButtons: React.FC<OverlayButtonsProps> = ({
       } else if (e.key === 'Enter') {
         console.log('Enter pressed, activating button at focusedIndex:', focusedIndex);
         e.preventDefault();
-        handleButtonClick(buttons[focusedIndex].onClick);
+        handleButtonClick(buttons[focusedIndex].onClick, buttons[focusedIndex].id);
       }
     };
 
@@ -199,48 +224,49 @@ export const OverlayButtons: React.FC<OverlayButtonsProps> = ({
       onWheel={handleWheel}
     >
       <div className="flex flex-row items-center w-full max-w-full gap-1">
-        {buttons.map((button, index) => {
-          const isFocused = isExpanded && hasNavigated && focusedIndex === index;
-          const isSessionButton = button.id === 'change-session';
+        {isExpanded
+          ? buttons.map((button, index) => {
+              const isFocused = hasNavigated && focusedIndex === index;
+              const isSessionButton = button.id === 'change-session';
 
-          return (
-            <React.Fragment key={button.id}>
-              {isSessionButton && isExpanded && <div className="w-px h-6 bg-border-default" />}
-              <button
-                onClick={() => handleButtonClick(button.onClick)}
-                className={`bg-transparent border-none p-3 rounded-xl cursor-pointer flex items-center transition-all duration-200 ${
-                  isFocused ? 'bg-slate-200 ring-2 ring-slate-400' : 'hover:bg-black/5'
-                } ${isSessionButton && isExpanded ? 'flex-1 min-w-0 max-w-full overflow-hidden' : 'flex-shrink-0'}`}
-                style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
-              >
-                <div className="text-gray-700 flex-shrink-0 leading-none">{button.icon}</div>
-                {isSessionButton ? (
-                  <div
-                    className="text-left text-sm font-normal text-gray-700 transition-all duration-300 truncate flex-1 min-w-0"
-                    style={{
-                      opacity: isExpanded ? 1 : 0,
-                      marginLeft: isExpanded ? '12px' : '0',
-                      maxWidth: isExpanded ? '100%' : '0',
-                    }}
+              return (
+                <React.Fragment key={button.id}>
+                  {isSessionButton && <div className="w-px h-6 bg-border-default" />}
+                  <button
+                    onClick={() => handleButtonClick(button.onClick, button.id)}
+                    className={`bg-transparent border-none p-3 rounded-xl cursor-pointer flex items-center transition-all duration-200 ${
+                      isFocused ? 'bg-slate-200 ring-2 ring-slate-400' : 'hover:bg-black/5'
+                    } ${isSessionButton ? 'flex-1 min-w-0 max-w-full overflow-hidden' : 'flex-shrink-0'}`}
+                    style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
                   >
-                    {button.label}
+                    <div className="text-gray-700 flex-shrink-0 leading-none">{button.icon}</div>
+                    {isSessionButton ? (
+                      <div className="text-left text-sm font-normal text-gray-700 truncate flex-1 min-w-0 ml-3">
+                        {button.label}
+                      </div>
+                    ) : (
+                      <div className="text-sm font-normal text-gray-700 whitespace-nowrap ml-3">
+                        {button.label}
+                      </div>
+                    )}
+                  </button>
+                </React.Fragment>
+              );
+            })
+          : (() => {
+              const lastUsedButton = buttons.find((b) => b.id === lastUsedButtonId);
+              return lastUsedButton ? (
+                <button
+                  onClick={() => handleButtonClick(lastUsedButton.onClick, lastUsedButton.id)}
+                  className="bg-transparent border-none p-3 rounded-xl cursor-pointer flex items-center justify-center transition-all duration-200 hover:bg-black/5"
+                  style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+                >
+                  <div className="text-gray-700 flex-shrink-0 leading-none">
+                    {lastUsedButton.icon}
                   </div>
-                ) : (
-                  <div
-                    className="text-sm font-normal text-gray-700 whitespace-nowrap overflow-hidden transition-all duration-300"
-                    style={{
-                      maxWidth: isExpanded ? '200px' : '0',
-                      opacity: isExpanded ? 1 : 0,
-                      marginLeft: isExpanded ? '12px' : '0',
-                    }}
-                  >
-                    {button.label}
-                  </div>
-                )}
-              </button>
-            </React.Fragment>
-          );
-        })}
+                </button>
+              ) : null;
+            })()}
       </div>
     </div>
   );

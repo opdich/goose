@@ -32,7 +32,7 @@ export const OverlayWindow: React.FC = () => {
 
   const handleAddNoteClick = () => {
     setShowAddNote(true);
-    window.electron.resizeOverlayWindow(500, 60);
+    window.electron.resizeOverlayWindow(550, 60);
   };
 
   const handleDictateClick = () => {

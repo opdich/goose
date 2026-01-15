@@ -59,34 +59,41 @@ export const OverlayButtons: React.FC<OverlayButtonsProps> = ({
       {
         id: 'change-session',
         icon: <FolderOpen className="w-5 h-5" />,
-        label: 'Explorations in AI design UX',
+        label: currentSessionName || 'Change session',
         onClick: onChangeSession,
       },
     ],
-    [onAddNote, onDictate, onScreenshot, onChangeSession]
+    [onAddNote, onDictate, onScreenshot, onChangeSession, currentSessionName]
   );
 
-  useEffect(() => {
-    const fetchSessionName = async () => {
-      try {
-        const [sessionId, sessions] = await Promise.all([
-          window.electron.getMainWindowSession(),
-          window.electron.listRecentSessions(),
-        ]);
+  const fetchSessionName = useCallback(async () => {
+    try {
+      const [sessionId, sessions] = await Promise.all([
+        window.electron.getMainWindowSession(),
+        window.electron.listRecentSessions(),
+      ]);
 
-        if (sessionId && sessions) {
-          const currentSession = (sessions as Session[]).find((s) => s.id === sessionId);
-          if (currentSession?.name) {
-            setCurrentSessionName(currentSession.name);
-          }
-        }
-      } catch (error) {
-        console.error('Failed to fetch session name:', error);
+      if (sessionId && sessions) {
+        const currentSession = (sessions as Session[]).find((s) => s.id === sessionId);
+        setCurrentSessionName(currentSession?.name || '');
+      } else {
+        setCurrentSessionName('');
       }
-    };
-
-    fetchSessionName();
+    } catch (error) {
+      console.error('Failed to fetch session name:', error);
+      setCurrentSessionName('');
+    }
   }, []);
+
+  useEffect(() => {
+    fetchSessionName();
+  }, [fetchSessionName]);
+
+  useEffect(() => {
+    if (isExpanded) {
+      fetchSessionName();
+    }
+  }, [isExpanded, fetchSessionName]);
 
   useEffect(() => {
     console.log('focusedIndex changed to:', focusedIndex);
@@ -103,12 +110,12 @@ export const OverlayButtons: React.FC<OverlayButtonsProps> = ({
     hoverTimeoutRef.current = setTimeout(() => {
       console.log('Expanding overlay');
       setIsExpanded(true);
-      window.electron.resizeOverlayWindow(600, 60);
+      window.electron.resizeOverlayWindow(550, 60);
       setTimeout(() => {
         console.log('Focusing container');
         containerRef.current?.focus();
       }, 100);
-    }, 2000);
+    }, 250);
   };
 
   const handleOverlayLeave = () => {
@@ -179,50 +186,52 @@ export const OverlayButtons: React.FC<OverlayButtonsProps> = ({
     <div
       ref={containerRef}
       tabIndex={-1}
-      className="min-h-[60px] p-2 outline-none"
+      className="min-h-[60px] w-screen p-2 outline-none"
       onMouseEnter={handleOverlayHover}
       onMouseLeave={handleOverlayLeave}
       onWheel={handleWheel}
     >
-      <div className="flex flex-row items-center">
+      <div className="flex flex-row items-center w-full max-w-full gap-1">
         {buttons.map((button, index) => {
           const isFocused = isExpanded && focusedIndex === index;
           const isSessionButton = button.id === 'change-session';
 
           return (
-            <button
-              key={button.id}
-              onClick={() => handleButtonClick(button.onClick)}
-              className={`bg-transparent border-none p-3 rounded-xl cursor-pointer flex items-center transition-all duration-200 ${
-                isFocused ? 'bg-slate-200 ring-2 ring-slate-400' : 'hover:bg-black/5'
-              }`}
-              style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
-            >
-              <div className="text-gray-700 flex-shrink-0 leading-none">{button.icon}</div>
-              {isSessionButton ? (
-                <div
-                  className="text-sm font-normal text-gray-700 whitespace-nowrap overflow-hidden transition-all duration-300"
-                  style={{
-                    maxWidth: isExpanded ? '400px' : '0',
-                    opacity: isExpanded ? 1 : 0,
-                    marginLeft: isExpanded ? '12px' : '0',
-                  }}
-                >
-                  {currentSessionName || button.label}
-                </div>
-              ) : (
-                <div
-                  className="text-sm font-normal text-gray-700 whitespace-nowrap overflow-hidden transition-all duration-300"
-                  style={{
-                    maxWidth: isExpanded ? '200px' : '0',
-                    opacity: isExpanded ? 1 : 0,
-                    marginLeft: isExpanded ? '12px' : '0',
-                  }}
-                >
-                  {button.label}
-                </div>
-              )}
-            </button>
+            <React.Fragment key={button.id}>
+              {isSessionButton && isExpanded && <div className="w-px h-6 bg-border-default" />}
+              <button
+                onClick={() => handleButtonClick(button.onClick)}
+                className={`bg-transparent border-none p-3 rounded-xl cursor-pointer flex items-center transition-all duration-200 ${
+                  isFocused ? 'bg-slate-200 ring-2 ring-slate-400' : 'hover:bg-black/5'
+                } ${isSessionButton && isExpanded ? 'flex-1 min-w-0 max-w-full overflow-hidden' : 'flex-shrink-0'}`}
+                style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+              >
+                <div className="text-gray-700 flex-shrink-0 leading-none">{button.icon}</div>
+                {isSessionButton ? (
+                  <div
+                    className="text-left text-sm font-normal text-gray-700 transition-all duration-300 truncate flex-1 min-w-0"
+                    style={{
+                      opacity: isExpanded ? 1 : 0,
+                      marginLeft: isExpanded ? '12px' : '0',
+                      maxWidth: isExpanded ? '100%' : '0',
+                    }}
+                  >
+                    {button.label}
+                  </div>
+                ) : (
+                  <div
+                    className="text-sm font-normal text-gray-700 whitespace-nowrap overflow-hidden transition-all duration-300"
+                    style={{
+                      maxWidth: isExpanded ? '200px' : '0',
+                      opacity: isExpanded ? 1 : 0,
+                      marginLeft: isExpanded ? '12px' : '0',
+                    }}
+                  >
+                    {button.label}
+                  </div>
+                )}
+              </button>
+            </React.Fragment>
           );
         })}
       </div>

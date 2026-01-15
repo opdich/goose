@@ -31,6 +31,7 @@ export const OverlayButtons: React.FC<OverlayButtonsProps> = ({
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [focusedIndex, setFocusedIndex] = useState(0);
+  const [hasNavigated, setHasNavigated] = useState(false);
   const [currentSessionName, setCurrentSessionName] = useState<string>('');
   const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const leaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -65,6 +66,8 @@ export const OverlayButtons: React.FC<OverlayButtonsProps> = ({
     ],
     [onAddNote, onDictate, onScreenshot, onChangeSession, currentSessionName]
   );
+
+  const navigableButtonsCount = 3;
 
   const fetchSessionName = useCallback(async () => {
     try {
@@ -128,6 +131,7 @@ export const OverlayButtons: React.FC<OverlayButtonsProps> = ({
     leaveTimeoutRef.current = setTimeout(() => {
       setIsExpanded(false);
       setFocusedIndex(0);
+      setHasNavigated(false);
       window.electron.resizeOverlayWindow(60, 60);
     }, 500);
   };
@@ -145,12 +149,13 @@ export const OverlayButtons: React.FC<OverlayButtonsProps> = ({
     if (!isExpanded) return;
 
     e.preventDefault();
+    setHasNavigated(true);
     if (e.deltaY > 0) {
       console.log('Scrolling right/down, incrementing focusedIndex');
-      setFocusedIndex((prev) => (prev + 1) % buttons.length);
+      setFocusedIndex((prev) => (prev + 1) % navigableButtonsCount);
     } else if (e.deltaY < 0) {
       console.log('Scrolling left/up, decrementing focusedIndex');
-      setFocusedIndex((prev) => (prev - 1 + buttons.length) % buttons.length);
+      setFocusedIndex((prev) => (prev - 1 + navigableButtonsCount) % navigableButtonsCount);
     }
   };
 
@@ -162,11 +167,13 @@ export const OverlayButtons: React.FC<OverlayButtonsProps> = ({
       if (e.key === 'ArrowRight') {
         console.log('ArrowRight pressed, incrementing focusedIndex');
         e.preventDefault();
-        setFocusedIndex((prev) => (prev + 1) % buttons.length);
+        setHasNavigated(true);
+        setFocusedIndex((prev) => (prev + 1) % navigableButtonsCount);
       } else if (e.key === 'ArrowLeft') {
         console.log('ArrowLeft pressed, decrementing focusedIndex');
         e.preventDefault();
-        setFocusedIndex((prev) => (prev - 1 + buttons.length) % buttons.length);
+        setHasNavigated(true);
+        setFocusedIndex((prev) => (prev - 1 + navigableButtonsCount) % navigableButtonsCount);
       } else if (e.key === 'Enter') {
         console.log('Enter pressed, activating button at focusedIndex:', focusedIndex);
         e.preventDefault();
@@ -193,7 +200,7 @@ export const OverlayButtons: React.FC<OverlayButtonsProps> = ({
     >
       <div className="flex flex-row items-center w-full max-w-full gap-1">
         {buttons.map((button, index) => {
-          const isFocused = isExpanded && focusedIndex === index;
+          const isFocused = isExpanded && hasNavigated && focusedIndex === index;
           const isSessionButton = button.id === 'change-session';
 
           return (

@@ -1383,7 +1383,7 @@ ipcMain.handle('open-overlay-window', async (event) => {
       x: initialX,
       y: initialY,
       frame: false,
-      transparent: true,
+      // transparent: true,
       alwaysOnTop: true,
       resizable: false,
       movable: true,
@@ -1391,7 +1391,7 @@ ipcMain.handle('open-overlay-window', async (event) => {
       maximizable: false,
       skipTaskbar: true,
       hasShadow: true,
-      opacity: 0.3,
+      // opacity: 1,
       backgroundColor: '#00000000',
       webPreferences: {
         preload: path.join(__dirname, 'preload.js'),

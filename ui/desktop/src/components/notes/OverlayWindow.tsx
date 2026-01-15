@@ -3,15 +3,11 @@ import { SessionSwitcherInline } from './SessionSwitcherInline';
 import { NoteInput } from './NoteInput';
 import { DictateMode } from './DictateMode';
 import { OverlayButtons } from './OverlayButtons';
-import { useOverlayOpacity } from '../../hooks/useOverlayOpacity';
 
 export const OverlayWindow: React.FC = () => {
   const [showAddNote, setShowAddNote] = useState(false);
   const [showDictate, setShowDictate] = useState(false);
   const [showSessionSwitcher, setShowSessionSwitcher] = useState(false);
-
-  const isDialogOpen = showAddNote || showDictate || showSessionSwitcher;
-  const { handleMouseEnter, handleMouseLeave } = useOverlayOpacity({ isDialogOpen });
 
   useEffect(() => {
     document.body.style.backgroundColor = 'transparent';
@@ -79,8 +75,6 @@ export const OverlayWindow: React.FC = () => {
 
   return (
     <div
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
       className="w-screen h-screen bg-transparent flex items-start justify-start p-0 m-0"
       style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
     >

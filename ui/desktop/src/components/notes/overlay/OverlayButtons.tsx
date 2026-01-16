@@ -22,6 +22,7 @@ interface OverlayButtonsProps {
   onScreenshot: () => void;
   onChangeSession: () => void;
   initialExpanded?: boolean;
+  triggerCollapseKey?: number;
 }
 
 export const OverlayButtons: React.FC<OverlayButtonsProps> = ({
@@ -30,6 +31,7 @@ export const OverlayButtons: React.FC<OverlayButtonsProps> = ({
   onScreenshot,
   onChangeSession,
   initialExpanded = false,
+  triggerCollapseKey = 0,
 }) => {
   const [isExpanded, setIsExpanded] = useState(initialExpanded);
   const [focusedIndex, setFocusedIndex] = useState(0);
@@ -44,6 +46,24 @@ export const OverlayButtons: React.FC<OverlayButtonsProps> = ({
       window.electron.resizeOverlayWindow(550, 60);
     }
   }, [initialExpanded]);
+
+  // Trigger auto-collapse when a tool closes (triggerCollapseKey changes)
+  useEffect(() => {
+    if (triggerCollapseKey > 0) {
+      // Start the collapse timeout
+      if (leaveTimeoutRef.current) {
+        clearTimeout(leaveTimeoutRef.current);
+      }
+      leaveTimeoutRef.current = setTimeout(() => {
+        if (!isInactive) {
+          setIsExpanded(false);
+          setFocusedIndex(0);
+          setHasNavigated(false);
+          window.electron.resizeOverlayWindow(60, 60);
+        }
+      }, 500);
+    }
+  }, [triggerCollapseKey, isInactive]);
   const [lastUsedButtonId, setLastUsedButtonId] = useState<string>(() => {
     try {
       return localStorage.getItem('overlay-last-used-button') || 'add-note';

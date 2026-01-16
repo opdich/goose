@@ -10,6 +10,8 @@ export const OverlayWindow: React.FC = () => {
   const [showSessionSwitcher, setShowSessionSwitcher] = useState(false);
   // Once a tool has been opened, keep the buttons expanded when returning
   const [shouldShowExpanded, setShouldShowExpanded] = useState(false);
+  // Counter to trigger auto-collapse when a tool closes
+  const [triggerCollapseKey, setTriggerCollapseKey] = useState(0);
 
   useEffect(() => {
     document.body.style.backgroundColor = 'transparent';
@@ -73,16 +75,19 @@ export const OverlayWindow: React.FC = () => {
   const handleCloseNote = () => {
     setShowAddNote(false);
     window.electron.resizeOverlayWindow(550, 60);
+    setTriggerCollapseKey((prev) => prev + 1);
   };
 
   const handleCloseDictate = () => {
     setShowDictate(false);
     window.electron.resizeOverlayWindow(550, 60);
+    setTriggerCollapseKey((prev) => prev + 1);
   };
 
   const handleCloseSessionSwitcher = () => {
     setShowSessionSwitcher(false);
     window.electron.resizeOverlayWindow(550, 60);
+    setTriggerCollapseKey((prev) => prev + 1);
   };
 
   return (
@@ -103,6 +108,7 @@ export const OverlayWindow: React.FC = () => {
           onScreenshot={handleScreenshotClick}
           onChangeSession={handleChangeProjectClick}
           initialExpanded={shouldShowExpanded}
+          triggerCollapseKey={triggerCollapseKey}
         />
       )}
     </div>

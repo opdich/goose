@@ -296,7 +296,7 @@ export const OverlayButtons: React.FC<OverlayButtonsProps> = ({
           }`}
           style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
         >
-          <Goose className={`w-12 h-12 text-gray-50`} />
+          <Goose className={`w-10 h-10 text-gray-50`} />
         </div>
       )}
       <div className="flex flex-row items-center w-full max-w-full gap-1 p-2 relative overflow-hidden">

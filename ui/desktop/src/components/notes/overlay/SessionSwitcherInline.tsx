@@ -99,7 +99,7 @@ export const SessionSwitcherInline: React.FC<SessionSwitcherInlineProps> = ({ on
   }, [onClose]);
 
   return (
-    <div className="w-full flex items-start">
+    <div className="w-full flex items-start bg-background-muted">
       <button
         onClick={onClose}
         className="p-3 m-2 rounded-xl flex items-center justify-center text-gray-700 bg-transparent border-none cursor-pointer hover:bg-black/5"

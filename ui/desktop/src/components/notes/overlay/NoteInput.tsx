@@ -86,7 +86,7 @@ export const NoteInput: React.FC<NoteInputProps> = ({ onClose }) => {
   }, [onClose]);
 
   return (
-    <div className="w-full flex items-center">
+    <div className="w-full flex items-center bg-background-muted">
       <button
         onClick={onClose}
         className="p-3 m-2 rounded-xl flex items-center justify-center text-gray-700 bg-transparent border-none cursor-pointer hover:bg-black/5"

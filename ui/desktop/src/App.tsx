@@ -41,7 +41,7 @@ import RecipesView from './components/recipes/RecipesView';
 import { NotesList } from './components/notes/NotesList';
 import { NoteEditor } from './components/notes/NoteEditor';
 import { CreateNoteModal } from './components/notes/CreateNoteModal';
-import { OverlayWindow } from './components/notes/OverlayWindow';
+import { OverlayWindow } from './components/notes/overlay/OverlayWindow';
 import { View, ViewOptions } from './utils/navigationUtils';
 import { NoProviderOrModelError, useAgent } from './hooks/useAgent';
 import { useNavigation } from './hooks/useNavigation';

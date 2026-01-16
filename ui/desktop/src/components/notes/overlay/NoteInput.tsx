@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Image } from 'lucide-react';
-import { ChatSmart, Attach, Send } from '../icons';
-import { Button } from '../ui/button';
+import { ChatSmart, Attach, Send } from '../../icons';
+import { Button } from '../../ui/button';
 
 interface NoteInputProps {
   onClose: () => void;

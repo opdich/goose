@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect, useMemo, useCallback } from 'react';
 import { Image, FolderOpen } from 'lucide-react';
-import { ChatSmart, Microphone, Goose } from '../icons';
+import { ChatSmart, Microphone, Goose } from '../../icons';
 
 interface OverlayButton {
   id: string;

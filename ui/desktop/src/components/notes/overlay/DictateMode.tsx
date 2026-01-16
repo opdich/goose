@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Microphone } from '../icons';
-import { useWhisper } from '../../hooks/useWhisper';
-import { toastError } from '../../toasts';
+import { Microphone } from '../../icons';
+import { useWhisper } from '../../../hooks/useWhisper';
+import { toastError } from '../../../toasts';
 
 interface DictateModeProps {
   onClose: () => void;

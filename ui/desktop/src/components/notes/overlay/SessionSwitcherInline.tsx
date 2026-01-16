@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { FolderOpen, Clock, Plus } from 'lucide-react';
-import { ScrollArea } from '../ui/scroll-area';
+import { ScrollArea } from '../../ui/scroll-area';
 
 interface Session {
   id: string;

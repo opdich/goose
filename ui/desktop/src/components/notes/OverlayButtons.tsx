@@ -278,32 +278,28 @@ export const OverlayButtons: React.FC<OverlayButtonsProps> = ({
     <div
       ref={containerRef}
       tabIndex={-1}
-      className={`min-h-[60px] w-screen p-2 outline-none transition-colors duration-500 ${
-        isInactive
-          ? 'bg-transparent'
-          : isTransitioning
-            ? 'bg-background-muted'
-            : 'bg-background-muted'
+      className={`min-h-[60px] w-screen outline-none transition-colors duration-500 ${
+        isInactive ? 'bg-transparent' : 'bg-background-muted'
       }`}
       onMouseEnter={handleOverlayHover}
       onMouseLeave={handleOverlayLeave}
       onWheel={handleWheel}
     >
-      <div className="flex flex-row items-center w-full max-w-full gap-1 relative overflow-hidden">
-        {(isInactive || isTransitioning) && (
-          <div
-            className={`absolute inset-0 flex items-center justify-center transition-all ease-in-out ${
-              isInactive && !isTransitioning
-                ? 'scale-100 opacity-100 duration-300'
-                : isTransitioning
-                  ? 'scale-[30] opacity-0 duration-500'
-                  : 'scale-100 opacity-100 duration-300'
-            }`}
-            style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
-          >
-            <Goose className={`w-12 h-12 text-gray-50`} />
-          </div>
-        )}
+      {(isInactive || isTransitioning) && (
+        <div
+          className={`absolute inset-0 flex items-center justify-center transition-all ease-in-out ${
+            isInactive && !isTransitioning
+              ? 'scale-100 opacity-100 duration-300'
+              : isTransitioning
+                ? 'scale-[30] opacity-0 duration-500'
+                : 'scale-100 opacity-100 duration-300'
+          }`}
+          style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+        >
+          <Goose className={`w-12 h-12 text-gray-50`} />
+        </div>
+      )}
+      <div className="flex flex-row items-center w-full max-w-full gap-1 p-2 relative overflow-hidden">
         <div
           className={`flex flex-row items-center w-full max-w-full gap-1 transition-opacity duration-200 ${
             showButtons ? 'opacity-100' : 'opacity-0'

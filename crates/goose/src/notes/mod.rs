@@ -117,11 +117,8 @@ impl NoteGenerator {
         });
         tracing::info!("Note title: {}", title);
 
-        // Prepend title as H1 to the content
-        let full_content = format!("# {}\n\n{}", title, note_content);
-
         tracing::info!("Saving note to database");
-        let note_id = SessionManager::create_note(title.clone(), full_content.clone())
+        let note_id = SessionManager::create_note(title.clone(), note_content.clone())
             .await
             .map_err(|e| anyhow::anyhow!("Failed to save note: {}", e))?;
         tracing::info!("Note saved with ID: {}", note_id);
@@ -142,7 +139,7 @@ impl NoteGenerator {
         Ok(Note {
             id: note_id,
             title,
-            content: full_content,
+            content: note_content,
             citations,
         })
     }

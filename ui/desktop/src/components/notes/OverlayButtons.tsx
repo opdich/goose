@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect, useMemo, useCallback } from 'react';
 import { Image, FolderOpen } from 'lucide-react';
-import { ChatSmart, Microphone } from '../icons';
+import { ChatSmart, Microphone, Goose } from '../icons';
 
 interface OverlayButton {
   id: string;
@@ -34,6 +34,9 @@ export const OverlayButtons: React.FC<OverlayButtonsProps> = ({
   const [isExpanded, setIsExpanded] = useState(initialExpanded);
   const [focusedIndex, setFocusedIndex] = useState(0);
   const [hasNavigated, setHasNavigated] = useState(false);
+  const [isInactive, setIsInactive] = useState(false);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const [showButtons, setShowButtons] = useState(true);
 
   useEffect(() => {
     if (initialExpanded) {
@@ -51,6 +54,7 @@ export const OverlayButtons: React.FC<OverlayButtonsProps> = ({
   const [currentSessionName, setCurrentSessionName] = useState<string>('');
   const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const leaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const inactiveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const buttons: OverlayButton[] = useMemo(
@@ -118,7 +122,36 @@ export const OverlayButtons: React.FC<OverlayButtonsProps> = ({
     console.log('focusedIndex changed to:', focusedIndex);
   }, [focusedIndex]);
 
+  const resetInactiveTimer = useCallback(() => {
+    if (inactiveTimeoutRef.current) {
+      clearTimeout(inactiveTimeoutRef.current);
+    }
+    setIsInactive(false);
+    inactiveTimeoutRef.current = setTimeout(() => {
+      // Start transition to inactive state
+      setShowButtons(false);
+      setIsTransitioning(true);
+      // Wait for buttons to fade out, then show goose and scale down
+      setTimeout(() => {
+        setIsInactive(true);
+        setIsTransitioning(false);
+      }, 300); // Wait for button fade out
+    }, 5000); // 5 seconds of inactivity
+  }, []);
+
+  useEffect(() => {
+    // Start inactive timer on mount
+    resetInactiveTimer();
+
+    return () => {
+      if (inactiveTimeoutRef.current) {
+        clearTimeout(inactiveTimeoutRef.current);
+      }
+    };
+  }, [resetInactiveTimer]);
+
   const handleOverlayHover = () => {
+    resetInactiveTimer();
     if (leaveTimeoutRef.current) {
       clearTimeout(leaveTimeoutRef.current);
       leaveTimeoutRef.current = null;
@@ -126,6 +159,21 @@ export const OverlayButtons: React.FC<OverlayButtonsProps> = ({
     if (hoverTimeoutRef.current) {
       clearTimeout(hoverTimeoutRef.current);
     }
+
+    // If coming from inactive state, trigger transition
+    if (isInactive) {
+      setIsTransitioning(true);
+      // Scale up goose and show gray background (handled by CSS)
+      setTimeout(() => {
+        // Then hide goose and show buttons
+        setIsInactive(false);
+        setTimeout(() => {
+          setShowButtons(true);
+          setIsTransitioning(false);
+        }, 50);
+      }, 300); // Wait for goose scale-up animation
+    }
+
     hoverTimeoutRef.current = setTimeout(() => {
       console.log('Expanding overlay');
       setIsExpanded(true);
@@ -138,6 +186,7 @@ export const OverlayButtons: React.FC<OverlayButtonsProps> = ({
   };
 
   const handleOverlayLeave = () => {
+    resetInactiveTimer();
     if (hoverTimeoutRef.current) {
       clearTimeout(hoverTimeoutRef.current);
     }
@@ -145,10 +194,12 @@ export const OverlayButtons: React.FC<OverlayButtonsProps> = ({
       clearTimeout(leaveTimeoutRef.current);
     }
     leaveTimeoutRef.current = setTimeout(() => {
-      setIsExpanded(false);
-      setFocusedIndex(0);
-      setHasNavigated(false);
-      window.electron.resizeOverlayWindow(60, 60);
+      if (!isInactive) {
+        setIsExpanded(false);
+        setFocusedIndex(0);
+        setHasNavigated(false);
+        window.electron.resizeOverlayWindow(60, 60);
+      }
     }, 500);
   };
 
@@ -227,55 +278,81 @@ export const OverlayButtons: React.FC<OverlayButtonsProps> = ({
     <div
       ref={containerRef}
       tabIndex={-1}
-      className="min-h-[60px] w-screen p-2 outline-none"
+      className={`min-h-[60px] w-screen p-2 outline-none transition-colors duration-500 ${
+        isInactive
+          ? 'bg-transparent'
+          : isTransitioning
+            ? 'bg-background-muted'
+            : 'bg-background-muted'
+      }`}
       onMouseEnter={handleOverlayHover}
       onMouseLeave={handleOverlayLeave}
       onWheel={handleWheel}
     >
-      <div className="flex flex-row items-center w-full max-w-full gap-1">
-        {isExpanded
-          ? buttons.map((button, index) => {
-              const isFocused = hasNavigated && focusedIndex === index;
-              const isSessionButton = button.id === 'change-session';
+      <div className="flex flex-row items-center w-full max-w-full gap-1 relative overflow-hidden">
+        {(isInactive || isTransitioning) && (
+          <div
+            className={`absolute inset-0 flex items-center justify-center transition-all ease-in-out ${
+              isInactive && !isTransitioning
+                ? 'scale-100 opacity-100 duration-300'
+                : isTransitioning
+                  ? 'scale-[30] opacity-0 duration-500'
+                  : 'scale-100 opacity-100 duration-300'
+            }`}
+            style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+          >
+            <Goose className={`w-12 h-12 text-gray-50`} />
+          </div>
+        )}
+        <div
+          className={`flex flex-row items-center w-full max-w-full gap-1 transition-opacity duration-200 ${
+            showButtons ? 'opacity-100' : 'opacity-0'
+          }`}
+        >
+          {isExpanded
+            ? buttons.map((button, index) => {
+                const isFocused = hasNavigated && focusedIndex === index;
+                const isSessionButton = button.id === 'change-session';
 
-              return (
-                <React.Fragment key={button.id}>
-                  {isSessionButton && <div className="w-px h-6 bg-border-default" />}
+                return (
+                  <React.Fragment key={button.id}>
+                    {isSessionButton && <div className="w-px h-6 bg-border-default" />}
+                    <button
+                      onClick={() => handleButtonClick(button.onClick, button.id)}
+                      className={`bg-transparent border-none p-3 rounded-xl cursor-pointer flex items-center transition-all duration-200 ${
+                        isFocused ? 'bg-slate-200 ring-2 ring-slate-400' : 'hover:bg-black/5'
+                      } ${isSessionButton ? 'flex-1 min-w-0 max-w-full overflow-hidden' : 'flex-shrink-0'}`}
+                      style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+                    >
+                      <div className="text-gray-700 flex-shrink-0 leading-none">{button.icon}</div>
+                      {isSessionButton ? (
+                        <div className="text-left text-sm font-normal text-gray-700 truncate flex-1 min-w-0 ml-3">
+                          {button.label}
+                        </div>
+                      ) : (
+                        <div className="text-sm font-normal text-gray-700 whitespace-nowrap ml-3">
+                          {button.label}
+                        </div>
+                      )}
+                    </button>
+                  </React.Fragment>
+                );
+              })
+            : (() => {
+                const lastUsedButton = buttons.find((b) => b.id === lastUsedButtonId);
+                return lastUsedButton ? (
                   <button
-                    onClick={() => handleButtonClick(button.onClick, button.id)}
-                    className={`bg-transparent border-none p-3 rounded-xl cursor-pointer flex items-center transition-all duration-200 ${
-                      isFocused ? 'bg-slate-200 ring-2 ring-slate-400' : 'hover:bg-black/5'
-                    } ${isSessionButton ? 'flex-1 min-w-0 max-w-full overflow-hidden' : 'flex-shrink-0'}`}
+                    onClick={() => handleButtonClick(lastUsedButton.onClick, lastUsedButton.id)}
+                    className="bg-transparent border-none p-3 rounded-xl cursor-pointer flex items-center justify-center transition-all duration-200 hover:bg-black/5"
                     style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
                   >
-                    <div className="text-gray-700 flex-shrink-0 leading-none">{button.icon}</div>
-                    {isSessionButton ? (
-                      <div className="text-left text-sm font-normal text-gray-700 truncate flex-1 min-w-0 ml-3">
-                        {button.label}
-                      </div>
-                    ) : (
-                      <div className="text-sm font-normal text-gray-700 whitespace-nowrap ml-3">
-                        {button.label}
-                      </div>
-                    )}
+                    <div className="text-gray-700 flex-shrink-0 leading-none">
+                      {lastUsedButton.icon}
+                    </div>
                   </button>
-                </React.Fragment>
-              );
-            })
-          : (() => {
-              const lastUsedButton = buttons.find((b) => b.id === lastUsedButtonId);
-              return lastUsedButton ? (
-                <button
-                  onClick={() => handleButtonClick(lastUsedButton.onClick, lastUsedButton.id)}
-                  className="bg-transparent border-none p-3 rounded-xl cursor-pointer flex items-center justify-center transition-all duration-200 hover:bg-black/5"
-                  style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
-                >
-                  <div className="text-gray-700 flex-shrink-0 leading-none">
-                    {lastUsedButton.icon}
-                  </div>
-                </button>
-              ) : null;
-            })()}
+                ) : null;
+              })()}
+        </div>
       </div>
     </div>
   );

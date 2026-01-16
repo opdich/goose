@@ -685,7 +685,7 @@ export function AppInner() {
         pauseOnHover
       />
       <ExtensionInstallModal addExtension={addExtension} setView={setView} />
-      <div className="relative w-screen h-screen overflow-hidden bg-background-muted flex flex-col">
+      <div className="relative w-screen h-screen overflow-hidden bg-background-transparent flex flex-col">
         <div className="titlebar-drag-region" />
         <Routes>
           <Route path="launcher" element={<LauncherView />} />

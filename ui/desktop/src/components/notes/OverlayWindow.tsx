@@ -8,6 +8,8 @@ export const OverlayWindow: React.FC = () => {
   const [showAddNote, setShowAddNote] = useState(false);
   const [showDictate, setShowDictate] = useState(false);
   const [showSessionSwitcher, setShowSessionSwitcher] = useState(false);
+  // Once a tool has been opened, keep the buttons expanded when returning
+  const [shouldShowExpanded, setShouldShowExpanded] = useState(false);
 
   useEffect(() => {
     document.body.style.backgroundColor = 'transparent';
@@ -31,16 +33,19 @@ export const OverlayWindow: React.FC = () => {
   };
 
   const handleAddNoteClick = () => {
+    setShouldShowExpanded(true);
     setShowAddNote(true);
     window.electron.resizeOverlayWindow(550, 60);
   };
 
   const handleDictateClick = () => {
+    setShouldShowExpanded(true);
     setShowDictate(true);
   };
 
   const handleScreenshotClick = async () => {
     try {
+      setShouldShowExpanded(true);
       // Collapse the overlay to just show the icon
       window.electron.resizeOverlayWindow(60, 60);
 
@@ -60,23 +65,24 @@ export const OverlayWindow: React.FC = () => {
   };
 
   const handleChangeProjectClick = () => {
+    setShouldShowExpanded(true);
     setShowSessionSwitcher(true);
     window.electron.resizeOverlayWindow(500, 196);
   };
 
   const handleCloseNote = () => {
     setShowAddNote(false);
-    window.electron.resizeOverlayWindow(60, 60);
+    window.electron.resizeOverlayWindow(550, 60);
   };
 
   const handleCloseDictate = () => {
     setShowDictate(false);
-    window.electron.resizeOverlayWindow(60, 60);
+    window.electron.resizeOverlayWindow(550, 60);
   };
 
   const handleCloseSessionSwitcher = () => {
     setShowSessionSwitcher(false);
-    window.electron.resizeOverlayWindow(60, 60);
+    window.electron.resizeOverlayWindow(550, 60);
   };
 
   return (
@@ -96,6 +102,7 @@ export const OverlayWindow: React.FC = () => {
           onDictate={handleDictateClick}
           onScreenshot={handleScreenshotClick}
           onChangeSession={handleChangeProjectClick}
+          initialExpanded={shouldShowExpanded}
         />
       )}
     </div>

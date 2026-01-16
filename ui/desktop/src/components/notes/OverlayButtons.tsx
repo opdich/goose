@@ -21,6 +21,7 @@ interface OverlayButtonsProps {
   onDictate: () => void;
   onScreenshot: () => void;
   onChangeSession: () => void;
+  initialExpanded?: boolean;
 }
 
 export const OverlayButtons: React.FC<OverlayButtonsProps> = ({
@@ -28,10 +29,18 @@ export const OverlayButtons: React.FC<OverlayButtonsProps> = ({
   onDictate,
   onScreenshot,
   onChangeSession,
+  initialExpanded = false,
 }) => {
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(initialExpanded);
   const [focusedIndex, setFocusedIndex] = useState(0);
   const [hasNavigated, setHasNavigated] = useState(false);
+
+  useEffect(() => {
+    if (initialExpanded) {
+      setIsExpanded(true);
+      window.electron.resizeOverlayWindow(550, 60);
+    }
+  }, [initialExpanded]);
   const [lastUsedButtonId, setLastUsedButtonId] = useState<string>(() => {
     try {
       return localStorage.getItem('overlay-last-used-button') || 'add-note';

@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Image } from 'lucide-react';
 import { ChatSmart, Attach, Send } from '../../icons';
 import { Button } from '../../ui/button';
+import { OverlayCloseButton } from './OverlayCloseButton';
 
 interface NoteInputProps {
   onClose: () => void;
@@ -87,13 +88,7 @@ export const NoteInput: React.FC<NoteInputProps> = ({ onClose }) => {
 
   return (
     <div className="w-full flex items-center bg-background-muted">
-      <button
-        onClick={onClose}
-        className="p-3 m-2 rounded-xl flex items-center justify-center text-gray-700 bg-transparent border-none cursor-pointer hover:bg-black/5"
-        style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
-      >
-        <ChatSmart className="w-5 h-5" />
-      </button>
+      <OverlayCloseButton icon={<ChatSmart className="w-5 h-5" />} onClick={onClose} />
       <div
         className="flex flex-1 gap-2 h-screen bg-background-default rounded-2xl"
         style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}

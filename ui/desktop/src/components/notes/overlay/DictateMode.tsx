@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Microphone } from '../../icons';
 import { useWhisper } from '../../../hooks/useWhisper';
 import { toastError } from '../../../toasts';
+import { OverlayCloseButton } from './OverlayCloseButton';
 
 interface DictateModeProps {
   onClose: () => void;
@@ -191,13 +192,7 @@ export const DictateMode: React.FC<DictateModeProps> = ({ onClose, autoStart = f
 
   return (
     <div className="w-full flex items-center bg-background-muted">
-      <button
-        onClick={handleCancel}
-        className="p-3 m-2 rounded-xl flex items-center justify-center text-gray-700 bg-transparent border-none cursor-pointer hover:bg-black/5"
-        style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
-      >
-        <Microphone className="w-5 h-5" />
-      </button>
+      <OverlayCloseButton icon={<Microphone className="w-5 h-5" />} onClick={handleCancel} />
 
       {!canUseDictation ? (
         <div

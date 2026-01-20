@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { FolderOpen, Clock, Plus } from 'lucide-react';
 import { ScrollArea } from '../../ui/scroll-area';
+import { OverlayCloseButton } from './OverlayCloseButton';
 
 interface Session {
   id: string;
@@ -100,13 +101,7 @@ export const SessionSwitcherInline: React.FC<SessionSwitcherInlineProps> = ({ on
 
   return (
     <div className="w-full flex items-start bg-background-muted">
-      <button
-        onClick={onClose}
-        className="p-3 m-2 rounded-xl flex items-center justify-center text-gray-700 bg-transparent border-none cursor-pointer hover:bg-black/5"
-        style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
-      >
-        <FolderOpen className="w-5 h-5" />
-      </button>
+      <OverlayCloseButton icon={<FolderOpen className="w-5 h-5" />} onClick={onClose} />
       <div
         className="flex flex-1 flex-col h-screen gap-0.5"
         style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}

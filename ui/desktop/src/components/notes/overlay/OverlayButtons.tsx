@@ -148,9 +148,7 @@ export const OverlayButtons: React.FC<OverlayButtonsProps> = ({
     return () => clearTimeout(timeoutId);
   }, [triggerCollapseKey, fetchSessionName]);
 
-  useEffect(() => {
-    console.log('focusedIndex changed to:', focusedIndex);
-  }, [focusedIndex]);
+  useEffect(() => {}, [focusedIndex]);
 
   const resetInactiveTimer = useCallback(() => {
     if (inactiveTimeoutRef.current) {
@@ -200,19 +198,26 @@ export const OverlayButtons: React.FC<OverlayButtonsProps> = ({
         setTimeout(() => {
           setShowButtons(true);
           setIsTransitioning(false);
+          // After transition completes, trigger expansion
+          hoverTimeoutRef.current = setTimeout(() => {
+            setIsExpanded(true);
+            window.electron.resizeOverlayWindow(550, 60);
+            setTimeout(() => {
+              containerRef.current?.focus();
+            }, 100);
+          }, 500);
         }, 50);
       }, 300); // Wait for goose scale-up animation
+    } else {
+      // Normal hover behavior when not coming from inactive state
+      hoverTimeoutRef.current = setTimeout(() => {
+        setIsExpanded(true);
+        window.electron.resizeOverlayWindow(550, 60);
+        setTimeout(() => {
+          containerRef.current?.focus();
+        }, 100);
+      }, 500);
     }
-
-    hoverTimeoutRef.current = setTimeout(() => {
-      console.log('Expanding overlay');
-      setIsExpanded(true);
-      window.electron.resizeOverlayWindow(550, 60);
-      setTimeout(() => {
-        console.log('Focusing container');
-        containerRef.current?.focus();
-      }, 100);
-    }, 500);
   };
 
   const handleOverlayLeave = () => {
@@ -260,16 +265,13 @@ export const OverlayButtons: React.FC<OverlayButtonsProps> = ({
   }, []);
 
   const handleWheel = (e: React.WheelEvent) => {
-    console.log('Wheel event:', { isExpanded, deltaY: e.deltaY });
     if (!isExpanded) return;
 
     e.preventDefault();
     setHasNavigated(true);
     if (e.deltaY > 0) {
-      console.log('Scrolling right/down, incrementing focusedIndex');
       setFocusedIndex((prev) => (prev + 1) % navigableButtonsCount);
     } else if (e.deltaY < 0) {
-      console.log('Scrolling left/up, decrementing focusedIndex');
       setFocusedIndex((prev) => (prev - 1 + navigableButtonsCount) % navigableButtonsCount);
     }
   };
@@ -278,28 +280,22 @@ export const OverlayButtons: React.FC<OverlayButtonsProps> = ({
     if (!isExpanded) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      console.log('Keydown event:', { key: e.key, isExpanded });
       if (e.key === 'ArrowRight') {
-        console.log('ArrowRight pressed, incrementing focusedIndex');
         e.preventDefault();
         setHasNavigated(true);
         setFocusedIndex((prev) => (prev + 1) % navigableButtonsCount);
       } else if (e.key === 'ArrowLeft') {
-        console.log('ArrowLeft pressed, decrementing focusedIndex');
         e.preventDefault();
         setHasNavigated(true);
         setFocusedIndex((prev) => (prev - 1 + navigableButtonsCount) % navigableButtonsCount);
       } else if (e.key === 'Enter') {
-        console.log('Enter pressed, activating button at focusedIndex:', focusedIndex);
         e.preventDefault();
         handleButtonClick(buttons[focusedIndex].onClick, buttons[focusedIndex].id);
       }
     };
 
-    console.log('Adding keyboard event listener, isExpanded:', isExpanded);
     document.addEventListener('keydown', handleKeyDown);
     return () => {
-      console.log('Removing keyboard event listener');
       document.removeEventListener('keydown', handleKeyDown);
     };
   }, [isExpanded, focusedIndex, buttons, handleButtonClick]);

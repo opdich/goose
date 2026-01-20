@@ -139,6 +139,16 @@ export const OverlayButtons: React.FC<OverlayButtonsProps> = ({
   }, [isExpanded, fetchSessionName]);
 
   useEffect(() => {
+    if (triggerCollapseKey === 0) return;
+
+    // Add a small delay to allow the main window to finish switching sessions
+    const timeoutId = setTimeout(() => {
+      fetchSessionName();
+    }, 200);
+    return () => clearTimeout(timeoutId);
+  }, [triggerCollapseKey, fetchSessionName]);
+
+  useEffect(() => {
     console.log('focusedIndex changed to:', focusedIndex);
   }, [focusedIndex]);
 

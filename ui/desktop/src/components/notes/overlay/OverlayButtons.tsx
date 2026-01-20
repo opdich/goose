@@ -39,6 +39,7 @@ export const OverlayButtons: React.FC<OverlayButtonsProps> = ({
   const [isInactive, setIsInactive] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [showButtons, setShowButtons] = useState(true);
+  const [isHovering, setIsHovering] = useState(false);
 
   useEffect(() => {
     if (initialExpanded) {
@@ -50,20 +51,23 @@ export const OverlayButtons: React.FC<OverlayButtonsProps> = ({
   // Trigger auto-collapse when a tool closes (triggerCollapseKey changes)
   useEffect(() => {
     if (triggerCollapseKey > 0) {
-      // Start the collapse timeout
-      if (leaveTimeoutRef.current) {
-        clearTimeout(leaveTimeoutRef.current);
-      }
-      leaveTimeoutRef.current = setTimeout(() => {
-        if (!isInactive) {
-          setIsExpanded(false);
-          setFocusedIndex(0);
-          setHasNavigated(false);
-          window.electron.resizeOverlayWindow(60, 60);
+      // Only start collapse timeout if not currently hovering
+      if (!isHovering) {
+        if (leaveTimeoutRef.current) {
+          clearTimeout(leaveTimeoutRef.current);
         }
-      }, 500);
+        // Give more time (2 seconds) when returning from a tool to prevent immediate collapse
+        leaveTimeoutRef.current = setTimeout(() => {
+          if (!isInactive && !isHovering) {
+            setIsExpanded(false);
+            setFocusedIndex(0);
+            setHasNavigated(false);
+            window.electron.resizeOverlayWindow(60, 60);
+          }
+        }, 2000);
+      }
     }
-  }, [triggerCollapseKey, isInactive]);
+  }, [triggerCollapseKey, isInactive, isHovering]);
   const [lastUsedButtonId, setLastUsedButtonId] = useState<string>(() => {
     try {
       return localStorage.getItem('overlay-last-used-button') || 'add-note';
@@ -179,6 +183,7 @@ export const OverlayButtons: React.FC<OverlayButtonsProps> = ({
   }, [resetInactiveTimer]);
 
   const handleOverlayHover = () => {
+    setIsHovering(true);
     resetInactiveTimer();
     if (leaveTimeoutRef.current) {
       clearTimeout(leaveTimeoutRef.current);
@@ -221,6 +226,7 @@ export const OverlayButtons: React.FC<OverlayButtonsProps> = ({
   };
 
   const handleOverlayLeave = () => {
+    setIsHovering(false);
     resetInactiveTimer();
     if (hoverTimeoutRef.current) {
       clearTimeout(hoverTimeoutRef.current);

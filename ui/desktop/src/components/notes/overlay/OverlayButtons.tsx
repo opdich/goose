@@ -159,17 +159,20 @@ export const OverlayButtons: React.FC<OverlayButtonsProps> = ({
       clearTimeout(inactiveTimeoutRef.current);
     }
     setIsInactive(false);
-    inactiveTimeoutRef.current = setTimeout(() => {
-      // Start transition to inactive state
-      setShowButtons(false);
-      setIsTransitioning(true);
-      // Wait for buttons to fade out, then show goose and scale down
-      setTimeout(() => {
-        setIsInactive(true);
-        setIsTransitioning(false);
-      }, 300); // Wait for button fade out
-    }, 5000); // 5 seconds of inactivity
-  }, []);
+    // Only set inactive timer if overlay is not expanded
+    if (!isExpanded) {
+      inactiveTimeoutRef.current = setTimeout(() => {
+        // Start transition to inactive state
+        setShowButtons(false);
+        setIsTransitioning(true);
+        // Wait for buttons to fade out, then show goose and scale down
+        setTimeout(() => {
+          setIsInactive(true);
+          setIsTransitioning(false);
+        }, 300); // Wait for button fade out
+      }, 5000); // 5 seconds of inactivity
+    }
+  }, [isExpanded]);
 
   useEffect(() => {
     // Start inactive timer on mount
@@ -181,6 +184,13 @@ export const OverlayButtons: React.FC<OverlayButtonsProps> = ({
       }
     };
   }, [resetInactiveTimer]);
+
+  // When overlay collapses, restart the inactive timer
+  useEffect(() => {
+    if (!isExpanded && !isHovering) {
+      resetInactiveTimer();
+    }
+  }, [isExpanded, isHovering, resetInactiveTimer]);
 
   const handleOverlayHover = () => {
     setIsHovering(true);

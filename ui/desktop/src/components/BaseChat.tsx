@@ -17,7 +17,7 @@ import { MainPanelLayout } from './Layout/MainPanelLayout';
 import ChatInput from './ChatInput';
 import { ScrollArea, ScrollAreaHandle } from './ui/scroll-area';
 import { useFileDrop } from '../hooks/useFileDrop';
-import { Message } from '../api';
+import { Message, reply } from '../api';
 import { ChatState } from '../types/chatState';
 import { ChatType } from '../types/chat';
 import { useIsMobile } from '../hooks/use-mobile';
@@ -28,7 +28,7 @@ import { useNavigation } from '../hooks/useNavigation';
 import { RecipeHeader } from './RecipeHeader';
 import { RecipeWarningModal } from './ui/RecipeWarningModal';
 import { scanRecipe } from '../recipe';
-import { UserInput } from '../types/message';
+import { UserInput, createUserMessage } from '../types/message';
 import { useCostTracking } from '../hooks/useCostTracking';
 import RecipeActivities from './recipes/RecipeActivities';
 import { useToolCount } from './alerts/useToolCount';
@@ -42,6 +42,8 @@ import { Recipe } from '../recipe';
 import { useAutoSubmit } from '../hooks/useAutoSubmit';
 import { Goose } from './icons';
 import EnvironmentBadge from './GooseSidebar/EnvironmentBadge';
+import { Sparkles } from 'lucide-react';
+import { SummaryPanel } from './SummaryPanel';
 
 const CurrentModelContext = createContext<{ model: string; mode: string } | null>(null);
 export const useCurrentModelInfo = () => useContext(CurrentModelContext);
@@ -86,6 +88,29 @@ export default function BaseChat({
   const { droppedFiles, setDroppedFiles, handleDrop, handleDragOver } = useFileDrop();
   const onStreamFinish = useCallback(() => {}, []);
   const [isCreateRecipeModalOpen, setIsCreateRecipeModalOpen] = useState(false);
+  const [summary, setSummary] = useState<string | null>(null);
+  const [isSummarizing, setIsSummarizing] = useState(false);
+  const [summaryError, setSummaryError] = useState<string | null>(null);
+  const [isSummarizeSlideOut, setIsSummarizeSlideOut] = useState(false);
+  const [showSummaryPanel, setShowSummaryPanel] = useState(false);
+  const [isSummaryOpen, setIsSummaryOpen] = useState(false);
+  const summaryPanelTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const summaryAbortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (summaryPanelTimerRef.current) clearTimeout(summaryPanelTimerRef.current);
+    };
+  }, []);
+
+  // Trigger open transition on next frame after mount, scroll after transition settles
+  useEffect(() => {
+    if (!showSummaryPanel) return;
+    const raf = requestAnimationFrame(() => setIsSummaryOpen(true));
+    return () => {
+      cancelAnimationFrame(raf);
+    };
+  }, [showSummaryPanel]);
 
   const {
     session,
@@ -160,6 +185,52 @@ export default function BaseChat({
     }
     handleSubmit(input);
   };
+
+  const handleSummarize = useCallback(async () => {
+    if (messages.length === 0 || isSummarizing) return;
+    if (summaryAbortRef.current) {
+      summaryAbortRef.current.abort();
+    }
+    const abortController = new AbortController();
+    summaryAbortRef.current = abortController;
+    setIsSummarizing(true);
+    setSummary(null);
+    setSummaryError(null);
+    try {
+      const summaryMsg = createUserMessage(
+        'Please provide a concise summary of our conversation so far, highlighting the main topics discussed, any key decisions made, and important outcomes or conclusions.'
+      );
+      // Use the session directly with conversation_so_far. Because handleSummarize
+      // runs its own stream loop (not useChatStream), these events are never
+      // dispatched to the main messages state, so nothing appears in the chat UI.
+      const { stream } = await reply({
+        body: { session_id: sessionId, user_message: summaryMsg, conversation_so_far: messages },
+        throwOnError: true,
+        signal: abortController.signal,
+      });
+      let accumulated = '';
+      for await (const event of stream) {
+        if (event.type === 'Message' && event.message.role === 'assistant') {
+          const chunk = event.message.content
+            .filter((c): c is { type: 'text'; text: string } => c.type === 'text')
+            .map((c) => c.text)
+            .join('');
+          if (chunk) {
+            accumulated += chunk;
+            setSummary(accumulated);
+          }
+        } else if (event.type === 'Finish' || event.type === 'Error') {
+          break;
+        }
+      }
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name === 'AbortError') return;
+      console.error('Summary generation failed:', err);
+      setSummaryError('Failed to generate summary. Please try again.');
+    } finally {
+      setIsSummarizing(false);
+    }
+  }, [messages, isSummarizing, sessionId]);
 
   const { sessionCosts } = useCostTracking({
     sessionInputTokens: session?.accumulated_input_tokens || 0,
@@ -447,6 +518,32 @@ export default function BaseChat({
             ) : null}
           </ScrollArea>
 
+          {messages.length > 0 && (
+            <button
+              type="button"
+              onClick={() => {
+                setIsSummarizeSlideOut(true);
+                if (summaryPanelTimerRef.current) clearTimeout(summaryPanelTimerRef.current);
+                summaryPanelTimerRef.current = setTimeout(() => setShowSummaryPanel(true), 300);
+                handleSummarize();
+              }}
+              disabled={isSummarizing || chatState !== ChatState.Idle}
+              style={
+                isSummarizeSlideOut
+                  ? { transform: 'translateX(calc(100% + 2rem))', opacity: 0 }
+                  : {}
+              }
+              className="no-drag group absolute bottom-4 right-4 z-20 flex items-center bg-slate-600 border border-slate-600 rounded-full px-2.5 py-1.5 text-white hover:bg-slate-700 hover:cursor-pointer transition-[transform,opacity] duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Sparkles size={13} className="flex-shrink-0" />
+              <div className="flex flex-align-center overflow-hidden max-w-0 group-hover:max-w-[5rem] transition-[max-width] duration-200 whitespace-nowrap ">
+                <span className="text-xs font-medium pl-1.5">
+                  {isSummarizing ? 'Summarizing...' : 'Summarize'}
+                </span>
+              </div>
+            </button>
+          )}
+
           {chatState !== ChatState.Idle && (
             <div className="absolute bottom-1 left-4 z-20 pointer-events-none">
               <LoadingGoose
@@ -460,6 +557,29 @@ export default function BaseChat({
             </div>
           )}
         </div>
+
+        {showSummaryPanel && (
+          <div className={`summary-panel-wrapper${isSummaryOpen ? ' is-open' : ''}`}>
+            <div>
+              <SummaryPanel
+                summary={summary}
+                isSummarizing={isSummarizing}
+                error={summaryError}
+                onDismiss={() => {
+                  setIsSummaryOpen(false);
+                  if (summaryPanelTimerRef.current) clearTimeout(summaryPanelTimerRef.current);
+                  summaryPanelTimerRef.current = setTimeout(() => {
+                    setSummary(null);
+                    setSummaryError(null);
+                    setIsSummarizeSlideOut(false);
+                    setShowSummaryPanel(false);
+                    requestAnimationFrame(() => scrollRef.current?.scrollToBottom());
+                  }, 300);
+                }}
+              />
+            </div>
+          </div>
+        )}
 
         <div
           className={`relative z-10 ${disableAnimation ? '' : 'animate-[fadein_400ms_ease-in_forwards]'}`}

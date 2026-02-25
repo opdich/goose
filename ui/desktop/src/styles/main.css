@@ -283,6 +283,22 @@
   font-style: normal;
 }
 
+/* Summary panel slide animation — grid trick avoids layout reflow per frame */
+.summary-panel-wrapper {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.3s ease-out;
+}
+
+.summary-panel-wrapper.is-open {
+  grid-template-rows: 1fr;
+}
+
+.summary-panel-wrapper > div {
+  overflow: hidden;
+  min-height: 0;
+}
+
 /* animations */
 @keyframes appear {
   from {
